@@ -6,32 +6,12 @@ import {
   toggleSelectionId,
 } from "../store/editorUISlice";
 import { selectSelectedIds } from "../store/selectors";
-
-interface PlannedLayer {
-  id: string;
-  label: string;
-  depth: number;
-}
-
-const plannedLayers: PlannedLayer[] = [
-  { id: "page.root", label: "Page", depth: 0 },
-  { id: "nav.root", label: "Navigation", depth: 0 },
-  { id: "hero.section", label: "Hero", depth: 0 },
-  { id: "hero.heading", label: "Hero Heading", depth: 1 },
-  { id: "hero.description", label: "Hero Description", depth: 1 },
-  { id: "hero.primaryButton", label: "Primary Button", depth: 1 },
-  { id: "services.section", label: "Services", depth: 0 },
-  { id: "services.card.1", label: "Service Card 1", depth: 1 },
-  { id: "services.card.2", label: "Service Card 2", depth: 1 },
-  { id: "services.card.3", label: "Service Card 3", depth: 1 },
-  { id: "testimonial.section", label: "Testimonial", depth: 0 },
-  { id: "cta.section", label: "Call to Action", depth: 0 },
-  { id: "footer.root", label: "Footer", depth: 0 },
-];
+import { selectOrderedTemplateTree } from "../template/templateSelectors";
 
 export function LayersPanel() {
   const dispatch = useAppDispatch();
   const selectedIds = useAppSelector(selectSelectedIds);
+  const templateTree = useAppSelector(selectOrderedTemplateTree);
 
   const selectLayer = (event: MouseEvent<HTMLButtonElement>, id: string) => {
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
@@ -56,30 +36,31 @@ export function LayersPanel() {
     >
       <div className="panel-heading">
         <span>Layers</span>
-        <small>Planned structure</small>
+        <small>Canonical tree</small>
       </div>
 
-      <div className="layer-list" role="list" aria-label="Planned elements">
-        {plannedLayers.map((layer) => {
-          const isSelected = selectedIds.includes(layer.id);
+      <div className="layer-list" role="list" aria-label="Template elements">
+        {templateTree.map(({ element, depth }) => {
+          const isSelected = selectedIds.includes(element.id);
 
           return (
             <button
-              key={layer.id}
+              key={element.id}
               type="button"
               className="layer-row"
-              data-depth={layer.depth}
+              data-depth={depth}
               data-selected={isSelected}
               aria-pressed={isSelected}
-              onClick={(event) => selectLayer(event, layer.id)}
+              aria-label={`${element.name}, ${element.id}`}
+              onClick={(event) => selectLayer(event, element.id)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  dispatch(replaceSelection([layer.id]));
+                  dispatch(replaceSelection([element.id]));
                 }
               }}
             >
-              <span className="layer-label">{layer.label}</span>
-              <code>{layer.id}</code>
+              <span className="layer-label">{element.name}</span>
+              <code>{element.id}</code>
             </button>
           );
         })}

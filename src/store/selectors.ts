@@ -1,6 +1,6 @@
 import type { RootState } from "../app/store";
 
-export const selectTemplateMetadata = (state: RootState) => state.template;
+export const selectTemplateMetadata = (state: RootState) => state.template.metadata;
 export const selectActiveViewport = (state: RootState) =>
   state.editorUI.activeViewport;
 export const selectEditScope = (state: RootState) => state.editorUI.editScope;

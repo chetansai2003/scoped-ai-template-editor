@@ -1,20 +1,26 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
-import { store } from "../app/store";
+import { createAppStore } from "../app/store";
+import { selectTotalCommittedHistoryEntries } from "../history/historySelectors";
 import { EditorShell } from "./EditorShell";
 
 function renderEditor() {
-  return render(
+  const store = createAppStore();
+
+  return {
+    store,
+    ...render(
     <Provider store={store}>
       <EditorShell />
     </Provider>,
-  );
+    ),
+  };
 }
 
 describe("EditorShell", () => {
-  it("renders the Step 1 shell regions", () => {
+  it("renders the editor shell regions", () => {
     renderEditor();
 
     expect(screen.getByRole("banner", { name: "Editor toolbar" })).toHaveTextContent(
@@ -34,6 +40,9 @@ describe("EditorShell", () => {
       "true",
     );
     expect(screen.getByText("1440 px")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("desktop preview").querySelector(".canvas-device"),
+    ).toHaveAttribute("data-intrinsic-width", "1440");
   });
 
   it("updates the canvas label when the viewport changes", async () => {
@@ -47,6 +56,21 @@ describe("EditorShell", () => {
       "true",
     );
     expect(screen.getByText("768 px")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("tablet preview").querySelector(".canvas-device"),
+    ).toHaveAttribute("data-intrinsic-width", "768");
+  });
+
+  it("updates the canvas label when the mobile viewport is selected", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Mobile" }));
+
+    expect(screen.getByText("375 px")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("mobile preview").querySelector(".canvas-device"),
+    ).toHaveAttribute("data-intrinsic-width", "375");
   });
 
   it("updates the canvas label when the edit scope changes", async () => {
@@ -58,39 +82,87 @@ describe("EditorShell", () => {
     expect(screen.getByText("mobile only")).toBeInTheDocument();
   });
 
-  it("selects a stable ID when a layer is clicked", async () => {
+  it("renders real Northstar Studio content from canonical state", () => {
+    renderEditor();
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Premium websites for teams moving faster than their roadmap.",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Positioning sprint")).toBeInTheDocument();
+    expect(screen.getByText("Start the sprint")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Template rendering will be implemented in Step 2"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("uses canonical IDs from the template model in the layer panel", () => {
+    renderEditor();
+
+    expect(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Feature Strategy, feature-strategy" }),
+    ).toBeInTheDocument();
+  });
+
+  it("selects a canonical stable ID when a layer is clicked", async () => {
     const user = userEvent.setup();
     renderEditor();
 
-    await user.click(screen.getByRole("button", { name: /Hero Heading/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
 
     const summary = screen.getByText("Selected stable IDs").parentElement;
     expect(summary).not.toBeNull();
-    expect(within(summary as HTMLElement).getByText("hero.heading")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("hero-heading")).toBeInTheDocument();
   });
 
   it("supports modifier-click multi-selection", async () => {
     const user = userEvent.setup();
     renderEditor();
 
-    await user.click(screen.getByRole("button", { name: /Hero Heading/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
     await user.keyboard("{Control>}");
-    await user.click(screen.getByRole("button", { name: /Primary Button/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Hero Primary CTA, hero-primary-cta" }),
+    );
     await user.keyboard("{/Control}");
 
     const summary = screen.getByText("Selected stable IDs").parentElement;
     expect(summary).not.toBeNull();
-    expect(within(summary as HTMLElement).getByText("hero.heading")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("hero-heading")).toBeInTheDocument();
     expect(
-      within(summary as HTMLElement).getByText("hero.primaryButton"),
+      within(summary as HTMLElement).getByText("hero-primary-cta"),
     ).toBeInTheDocument();
+  });
+
+  it("highlights the selected element in the renderer", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    expect(document.querySelector('[data-element-id="hero-heading"]')).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
   });
 
   it("clears selection with Escape from the layer panel", async () => {
     const user = userEvent.setup();
     renderEditor();
 
-    const layer = screen.getByRole("button", { name: /Hero Heading/ });
+    const layer = screen.getByRole("button", {
+      name: "Hero Heading, hero-heading",
+    });
     await user.click(layer);
     expect(layer).toHaveAttribute("aria-pressed", "true");
 
@@ -117,8 +189,161 @@ describe("EditorShell", () => {
     await user.click(screen.getByRole("tab", { name: "AI Edit" }));
 
     expect(screen.getByRole("tabpanel")).toHaveTextContent(
-      "intentionally non-functional in Step 1",
+      "intentionally non-functional in Step 4",
     );
     expect(screen.queryByRole("button", { name: /generate/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the proposal drawer non-mutating and Step 5 scoped", () => {
+    renderEditor();
+
+    expect(screen.getByLabelText("AI proposal drawer")).toHaveTextContent(
+      "AI proposals will appear here in Step 5",
+    );
+    expect(screen.getByLabelText("AI proposal drawer")).toHaveTextContent(
+      "never modify the template before acceptance",
+    );
+  });
+
+  it("selects the exact canvas element without selecting its parent", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    const heading = document.querySelector('[data-element-id="hero-heading"]');
+
+    expect(heading).toBeInstanceOf(HTMLElement);
+
+    await user.click(heading as HTMLElement);
+
+    const summary = screen.getByText("Selected stable IDs").parentElement;
+    expect(summary).not.toBeNull();
+    expect(within(summary as HTMLElement).getByText("hero-heading")).toBeInTheDocument();
+    expect(
+      within(summary as HTMLElement).queryByText("hero-copy-stack"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("selects a focused canvas element with Enter", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    const heading = screen.getByRole("heading", {
+      name: "Premium websites for teams moving faster than their roadmap.",
+    });
+
+    heading.focus();
+    await user.keyboard("{Enter}");
+
+    expect(document.querySelector('[data-element-id="hero-heading"]')).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
+  });
+
+  it("commits inline text edits through history and cancels with Escape", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Edit text inline" }));
+
+    const draft = screen.getByLabelText("Inline text draft");
+    await user.clear(draft);
+    await user.type(draft, "A manually edited launch headline.");
+    await user.keyboard("{Enter}");
+
+    expect(store.getState().template.elements["hero-heading"].content.text).toBe(
+      "A manually edited launch headline.",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+
+    await user.click(screen.getByRole("button", { name: "Edit text inline" }));
+    await user.clear(screen.getByLabelText("Inline text draft"));
+    await user.type(screen.getByLabelText("Inline text draft"), "Canceled text");
+    await user.keyboard("{Escape}");
+
+    expect(store.getState().template.elements["hero-heading"].content.text).toBe(
+      "A manually edited launch headline.",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+  });
+
+  it("applies inspector style edits through the command executor", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const colorInput = screen.getByLabelText("Text color");
+    fireEvent.change(colorInput, { target: { value: "#111111" } });
+    const field = colorInput.closest(".inspector-field");
+
+    expect(field).not.toBeNull();
+
+    await user.click(within(field as HTMLElement).getByRole("button", { name: "Apply" }));
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#111111",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+  });
+
+  it("shows viewport impact and commits mobile-only visibility as an override", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Feature Strategy, feature-strategy" }),
+    );
+    await user.selectOptions(screen.getByLabelText(/scope/i), "mobile");
+
+    expect(screen.getByLabelText("Viewport impact")).toHaveTextContent("Affected");
+    expect(screen.getAllByText("Protected")).toHaveLength(2);
+
+    const visibleInput = screen.getByLabelText("Visible");
+    await user.click(visibleInput);
+    const field = visibleInput.closest(".inspector-field");
+
+    expect(field).not.toBeNull();
+
+    await user.click(within(field as HTMLElement).getByRole("button", { name: "Apply" }));
+
+    expect(
+      store.getState().template.elements["feature-strategy"].overrides.mobile?.layout
+        ?.visible,
+    ).toBe(false);
+    expect(store.getState().template.elements["feature-strategy"].layout.visible).toBeUndefined();
+  });
+
+  it("keeps resize movement local until pointer release creates one history entry", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+
+    const handle = await screen.findByRole("button", {
+      name: "Resize hero-visual-card",
+    });
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(screen.getByLabelText("Selection overlay"), {
+      clientX: 60,
+      clientY: 30,
+    });
+
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+
+    fireEvent.pointerUp(screen.getByLabelText("Selection overlay"), {
+      clientX: 60,
+      clientY: 30,
+    });
+
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+    expect(store.getState().template.elements["hero-visual-card"].layout.width).toBeGreaterThan(160);
   });
 });

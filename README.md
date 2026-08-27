@@ -1,33 +1,31 @@
 # Scoped AI Template Editor
 
-Step 1 foundation for a browser-based website builder that will eventually edit a typed, JSON-serializable template model through scoped commands and AI proposals.
+Step 3 foundation for a browser-based website builder. The app renders an original `Northstar Studio` landing page from canonical JSON state and now has a safe command, validation, revision, and history core for future edits.
 
-## Primary User
+## Step 3 Status
 
-The primary user is a frontend evaluator or product-minded builder reviewing whether the editor foundation can grow into a scoped AI template editor without confusing demo behavior for real editing features.
+Implemented through Step 3:
 
-## Step 1 Status
+- React, TypeScript, Vite, Redux Toolkit, Zod, Vitest, jsdom, and Testing Library setup.
+- Canonical `TemplateDocument` stored in Redux as the durable source of truth.
+- Recursive renderer and layers panel powered by the canonical template tree.
+- Typed JSON-safe edit commands and strict Zod command schemas.
+- Central command executor for all committed template changes.
+- Editable-property registry for actual model fields.
+- Per-element base, desktop, tablet, and mobile revision counters.
+- Stale-command protection for base and viewport-scoped edits.
+- Atomic multi-target commits through one Redux action.
+- Separate scoped history entries per affected element.
+- Restore-as-a-new-command helper.
 
-Implemented in Step 1:
+Not implemented yet:
 
-- Vite, React, TypeScript, Redux Toolkit, React Redux, Vitest, jsdom, Testing Library, and Playwright package setup.
-- Redux boundaries for template metadata, editor UI, AI proposal state, and history state.
-- A professional editor shell with toolbar, layers panel, canvas placeholder, right panel, and AI proposal drawer.
-- Working viewport switching, edit-scope switching, selection, multi-selection, Escape clearing, and right-panel tab switching.
-- Documentation for architecture, product notes, AI usage, and future agent work.
+- Step 4 inspector editing controls, inline canvas editing, resize handles, drag/drop, or reordering UI.
+- Step 5 AI proposal generation, CodeMirror behavior, code editing, deterministic AI scenarios, or proposal acceptance UI.
+- Step 6 localStorage persistence, reset persistence behavior, or full recovery UI.
+- Backend services or real AI API calls.
 
-Not implemented in Step 1:
-
-- Canonical element model, viewport resolver, command executor, Zod command validation, template renderer, CodeMirror editing behavior, DnD behavior, AI engine, history restore, or localStorage persistence.
-
-## Technology Choices
-
-- React + TypeScript + Vite for the frontend foundation.
-- Redux Toolkit + React Redux for state ownership boundaries.
-- Vitest + jsdom + Testing Library for behavior-focused tests.
-- CodeMirror, dnd-kit, and Zod are installed for later planned steps but are not wired into Step 1 features.
-
-## Installation And Commands
+## Commands
 
 ```bash
 npm install
@@ -38,82 +36,81 @@ npm run test:run
 npm run build
 ```
 
-## High-Level Architecture
+## Architecture
 
-Future flow:
-
-```text
-Editor UI -> Command creators -> Central command executor
--> Zod + scope + revision validation -> Canonical template state
--> Viewport resolver -> React template renderer
-```
-
-Step 1 creates only the shell and state boundaries needed for that architecture.
-
-## Redux State Ownership
-
-- `template`: template metadata only for `Northstar Studio`.
-- `editorUI`: selected IDs, active preview viewport, edit scope, and active right panel.
-- `proposal`: empty AI proposal boundary for Step 5.
-- `history`: empty per-element history boundary for later recovery work.
-
-## Editor Component Architecture
+Current Step 3 flow:
 
 ```text
-EditorShell
-TopToolbar
-LayersPanel
-Canvas
-RightPanel
-ProposalDrawer
+External edit intent -> EditCommand -> Zod schema validation
+-> command executor validation -> validated commit payload
+-> one Redux commit action -> template + history reducers
+-> renderer/layers read canonical state
 ```
 
-Future folder architecture will add command, model, validation, renderer, AI, persistence, and history modules only when those steps are implemented. Empty placeholder files for future features should not be created.
+Reducers receive already-validated explicit before/after element snapshots and history entries. Reducers do not parse command paths, validate commands, generate IDs, or read the current time.
+
+## Model And Scopes
+
+`EditScope` means the property group being edited:
+
+- `content`
+- `style`
+- `layout`
+
+`ViewportScope` means the responsive write target:
+
+- `all`
+- `desktop`
+- `tablet`
+- `mobile`
+
+`all` writes to base values. Viewport scopes write only to the matching viewport override. Viewport `oldValue` is compared against the currently resolved value: override when present, otherwise base fallback.
+
+## Revisions
+
+Every template element has:
+
+```ts
+{
+  base: number;
+  desktop: number;
+  tablet: number;
+  mobile: number;
+}
+```
+
+Base edits increment only `base`. Desktop, tablet, and mobile edits increment only their matching viewport counter. A viewport revision token includes both the base revision and that viewport revision, so base edits stale older viewport commands while unrelated viewport edits do not.
+
+## Validation Order
+
+Commands are validated in this order:
+
+1. Command schema
+2. Duplicate target detection
+3. Element existence
+4. AI selection authority
+5. Editable property boundary
+6. Property scope
+7. Revision token
+8. Old-value consistency
+9. New-value safety
+10. Resulting template structure
+
+AI commands must target elements present in both the proposal-time `selectedIdsSnapshot` and the current editor selection.
+
+## History And Restore
+
+Successful commands append one history entry per affected element and viewport scope. Failed commands create no history. Restore creates a normal `source: "restore"` command from a history entry, goes through the same executor, and appends new history without deleting newer entries.
 
 ## Original Template Source
 
 Template source: Original template created specifically for this assignment. No external template is used.
 
-Planned one-page template: `Northstar Studio`, a digital studio website with Navigation, Hero, Services with three cards, Testimonial, Call to Action, and Footer.
+`Northstar Studio` is a one-page digital studio landing page with Navigation, Hero, Stats, Features, Process, Call to Action, and Footer sections.
 
-## Planned Stable IDs
+## Verification
 
-- `page.root`
-- `nav.root`
-- `hero.section`
-- `hero.heading`
-- `hero.description`
-- `hero.primaryButton`
-- `services.section`
-- `services.card.1`
-- `services.card.2`
-- `services.card.3`
-- `testimonial.section`
-- `cta.section`
-- `footer.root`
-
-These IDs are temporary layer-panel data in Step 1 and are not yet the canonical template model.
-
-## Seven-Step Roadmap
-
-1. Project foundation and editor shell.
-2. Canonical template model and renderer.
-3. Command pipeline and validation.
-4. Design inspector and editable property boundaries.
-5. AI proposal generation, before/after review, and acceptance.
-6. Persistence, reset, and recovery.
-7. Polish, accessibility, and production hardening.
-
-## Current Limitations
-
-- The canvas is a placeholder and does not render JSON template data.
-- The AI, code, and history panels are intentionally non-functional.
-- Reset is disabled because persistence is planned for Step 6.
-- Installed future-step libraries are not used for product behavior yet.
-
-## Verification Commands
-
-Run before declaring Step 1 complete:
+Run before declaring Step 3 complete:
 
 ```bash
 npm run typecheck

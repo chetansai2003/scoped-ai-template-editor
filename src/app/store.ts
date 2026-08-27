@@ -4,14 +4,19 @@ import historyReducer from "../store/historySlice";
 import proposalReducer from "../store/proposalSlice";
 import templateReducer from "../store/templateSlice";
 
-export const store = configureStore({
-  reducer: {
-    template: templateReducer,
-    editorUI: editorUIReducer,
-    proposal: proposalReducer,
-    history: historyReducer,
-  },
-});
+export function createAppStore() {
+  return configureStore({
+    reducer: {
+      template: templateReducer,
+      editorUI: editorUIReducer,
+      proposal: proposalReducer,
+      history: historyReducer,
+    },
+  });
+}
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+export const store = createAppStore();
+
+export type AppStore = ReturnType<typeof createAppStore>;
+export type RootState = ReturnType<AppStore["getState"]>;
+export type AppDispatch = AppStore["dispatch"];

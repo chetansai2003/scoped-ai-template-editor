@@ -5,10 +5,8 @@ import {
 } from "../store/editorUISlice";
 import {
   selectActivePanel,
-  selectActiveViewport,
-  selectEditScope,
-  selectSelectedIds,
 } from "../store/selectors";
+import { DesignInspector } from "./DesignInspector";
 
 const tabs: Array<{ id: EditorPanel; label: string }> = [
   { id: "design", label: "Design" },
@@ -20,15 +18,12 @@ const tabs: Array<{ id: EditorPanel; label: string }> = [
 export function RightPanel() {
   const dispatch = useAppDispatch();
   const activePanel = useAppSelector(selectActivePanel);
-  const selectedIds = useAppSelector(selectSelectedIds);
-  const activeViewport = useAppSelector(selectActiveViewport);
-  const editScope = useAppSelector(selectEditScope);
 
   return (
     <aside className="right-panel" aria-label="Right panel">
       <div className="panel-heading">
         <span>Inspector</span>
-        <small>Step 1 shell</small>
+        <small>Step 4 manual editing</small>
       </div>
 
       <div className="tab-list" role="tablist" aria-label="Inspector sections">
@@ -55,28 +50,7 @@ export function RightPanel() {
         className="tab-panel"
       >
         {activePanel === "design" && (
-          <>
-            <h2>Design</h2>
-            <p>Inspector controls begin in Step 4</p>
-            <dl>
-              <div>
-                <dt>Selected</dt>
-                <dd>
-                  {selectedIds.length > 0
-                    ? selectedIds.join(", ")
-                    : "No selected IDs"}
-                </dd>
-              </div>
-              <div>
-                <dt>Viewport</dt>
-                <dd>{activeViewport}</dd>
-              </div>
-              <div>
-                <dt>Edit scope</dt>
-                <dd>{editScope}</dd>
-              </div>
-            </dl>
-          </>
+          <DesignInspector />
         )}
 
         {activePanel === "ai" && (
@@ -84,7 +58,7 @@ export function RightPanel() {
             <h2>AI Edit</h2>
             <p>
               AI proposal creation will be implemented in Step 5. This panel is
-              intentionally non-functional in Step 1.
+              intentionally non-functional in Step 4.
             </p>
           </>
         )}
@@ -94,7 +68,7 @@ export function RightPanel() {
             <h2>Code</h2>
             <p>
               JSON code editing and shared-state synchronization will be
-              implemented in a later step.
+              implemented in Step 5.
             </p>
           </>
         )}
@@ -104,7 +78,7 @@ export function RightPanel() {
             <h2>History</h2>
             <p>
               Per-element and per-viewport recovery will be implemented in a
-              later step.
+              later step. Step 4 manual edits already create scoped history.
             </p>
           </>
         )}

@@ -1,13 +1,13 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { Viewport } from "../template/templateTypes";
 
-export type Viewport = "desktop" | "tablet" | "mobile";
-export type EditScope = "all" | Viewport;
+export type ViewportScope = "all" | Viewport;
 export type EditorPanel = "design" | "ai" | "code" | "history";
 
 export interface EditorUIState {
   selectedIds: string[];
   activeViewport: Viewport;
-  editScope: EditScope;
+  editScope: ViewportScope;
   activePanel: EditorPanel;
 }
 
@@ -25,7 +25,7 @@ const editorUISlice = createSlice({
     setActiveViewport(state, action: PayloadAction<Viewport>) {
       state.activeViewport = action.payload;
     },
-    setEditScope(state, action: PayloadAction<EditScope>) {
+    setEditScope(state, action: PayloadAction<ViewportScope>) {
       state.editScope = action.payload;
     },
     setActivePanel(state, action: PayloadAction<EditorPanel>) {

@@ -2,9 +2,9 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import {
   setActiveViewport,
   setEditScope,
-  type EditScope,
-  type Viewport,
+  type ViewportScope,
 } from "../store/editorUISlice";
+import type { Viewport } from "../template/templateTypes";
 import {
   selectActiveViewport,
   selectEditScope,
@@ -17,7 +17,7 @@ const viewportOptions: Array<{ value: Viewport; label: string }> = [
   { value: "mobile", label: "Mobile" },
 ];
 
-const scopeOptions: Array<{ value: EditScope; label: string }> = [
+const scopeOptions: Array<{ value: ViewportScope; label: string }> = [
   { value: "all", label: "All views" },
   { value: "desktop", label: "Desktop only" },
   { value: "tablet", label: "Tablet only" },
@@ -56,7 +56,7 @@ export function TopToolbar() {
         <select
           value={editScope}
           onChange={(event) =>
-            dispatch(setEditScope(event.currentTarget.value as EditScope))
+            dispatch(setEditScope(event.currentTarget.value as ViewportScope))
           }
         >
           {scopeOptions.map((option) => (

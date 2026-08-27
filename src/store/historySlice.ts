@@ -1,10 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { commitValidatedTemplateChange } from "../commands/commitActions";
+import type { HistoryEntry, HistoryState } from "../commands/commandTypes";
+import type { ElementId } from "../template/templateTypes";
+import type { ViewportScope } from "./editorUISlice";
 
-export interface HistoryFoundationState {
-  byElement: Record<string, unknown>;
-}
-
-const initialState: HistoryFoundationState = {
+const initialState: HistoryState = {
   byElement: {},
 };
 
@@ -12,6 +12,24 @@ const historySlice = createSlice({
   name: "history",
   initialState,
   reducers: {},
+  extraReducers: (builder) => {
+    builder.addCase(commitValidatedTemplateChange, (state, action) => {
+      action.payload.targets.forEach((target) => {
+        const elementHistory = state.byElement[target.elementId] ?? {};
+        const scopedHistory = elementHistory[action.payload.viewportScope] ?? [];
+
+        state.byElement[target.elementId] = {
+          ...elementHistory,
+          [action.payload.viewportScope]: [
+            ...scopedHistory,
+            target.historyEntry,
+          ],
+        };
+      });
+    });
+  },
 });
 
 export default historySlice.reducer;
+
+export type { ElementId, HistoryEntry, HistoryState, ViewportScope };
