@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { commitValidatedTemplateChange } from "../commands/commitActions";
+import { commitValidatedTemplateChange, resetEditor } from "../commands/commitActions";
 import type { HistoryEntry, HistoryState } from "../commands/commandTypes";
 import type { ElementId } from "../template/templateTypes";
 import type { ViewportScope } from "./editorUISlice";
@@ -26,6 +26,9 @@ const historySlice = createSlice({
           ],
         };
       });
+    });
+    builder.addCase(resetEditor, (state) => {
+      state.byElement = {};
     });
   },
 });

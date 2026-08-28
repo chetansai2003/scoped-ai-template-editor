@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { resetEditor } from "../commands/commitActions";
 import type { Viewport } from "../template/templateTypes";
 
 export type ViewportScope = "all" | Viewport;
@@ -9,6 +10,7 @@ export interface EditorUIState {
   activeViewport: Viewport;
   editScope: ViewportScope;
   activePanel: EditorPanel;
+  persistenceNotice: string | null;
 }
 
 const initialState: EditorUIState = {
@@ -16,12 +18,16 @@ const initialState: EditorUIState = {
   activeViewport: "desktop",
   editScope: "all",
   activePanel: "design",
+  persistenceNotice: null,
 };
 
 const editorUISlice = createSlice({
   name: "editorUI",
   initialState,
   reducers: {
+    setPersistenceNotice(state, action: PayloadAction<string | null>) {
+      state.persistenceNotice = action.payload;
+    },
     setActiveViewport(state, action: PayloadAction<Viewport>) {
       state.activeViewport = action.payload;
     },
@@ -44,6 +50,13 @@ const editorUISlice = createSlice({
       state.selectedIds = [];
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(resetEditor, (state) => {
+      state.selectedIds = [];
+      state.activeViewport = "desktop";
+      state.editScope = "all";
+    });
+  },
 });
 
 export const {
@@ -53,6 +66,7 @@ export const {
   setActiveViewport,
   setEditScope,
   toggleSelectionId,
+  setPersistenceNotice,
 } = editorUISlice.actions;
 
 export default editorUISlice.reducer;

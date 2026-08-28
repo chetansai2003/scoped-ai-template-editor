@@ -1,33 +1,36 @@
 # Product Notes
 
-## Implemented Through Step 3
+## Implemented Through Step 5
 
-- Primary user: a reviewer or builder validating the foundation for a scoped AI template editor.
-- Element: a stable JSON model node with content, style, layout, viewport overrides, children, and per-scope revisions.
-- Safe completed edit: a strictly validated command that produces one reducer-safe commit payload before any mutation.
-- Command boundary: all committed template changes must pass through the central executor.
-- Group selection: normal layer click replaces selection; Ctrl, Cmd, or Shift click toggles a stable ID.
-- Responsive policy: `all` writes base values; viewport scopes write only matching overrides.
-- Stale protection: viewport tokens include base plus viewport revision; base edits stale old viewport tokens.
-- History policy: successful commands append independent history entries per element and viewport scope.
-- Restore policy: restoration creates a new `source: "restore"` command and never rewinds Redux or deletes newer history.
+- Primary user: a reviewer or builder validating a scoped AI template editor.
+- Element: a stable JSON model node with content, style, layout, viewport overrides, children, and revisions.
+- Command boundary: canvas, inspector, code, accepted AI, and restore edits use the central executor.
+- Code editing: one selected element, one focused scope, explicit Apply, local drafts, and no full-template edits.
+- AI proposals: deterministic local scenarios create typed proposal batches for review only.
+- Proposal acceptance: each pending item is accepted or rejected independently.
+- Stale protection: changed revision tokens mark only affected proposal items stale.
+- Authority protection: accepted AI items must still be selected and must be in the proposal-time selection snapshot.
 
-## Planned For Later Steps
+## Supported AI Instructions
 
-- Step 4: inspector controls, editable property UI, and user-facing command creators.
-- Step 5: AI proposal generation, code editing, CodeMirror behavior, deterministic AI scenarios, and proposal acceptance.
-- Step 6: localStorage persistence, reset behavior, and full recovery UI.
+- `Make this text more concise`
+- `Make the selected element dark blue`
+- `Make this card wider and move it first`
+- `Stack selected items vertically`
+- `Make the selected cards compact`
+- `Add a payment system`
 
 ## Current Cuts And Assumptions
 
-- No editing UI exists yet; tests construct commands directly.
-- No structure editing commands exist; parent/child fields are protected.
-- The existing canonical tree and every prospective tree after a command are validated.
-- AI authority is enforced for direct AI commands, but no AI proposal engine exists.
-- No backend, real AI API, persistence, drag/drop, resize handles, or CodeMirror behavior exists.
+- AI is deterministic local logic, not a real LLM.
+- CodeMirror edits only exposed editable `content`, `style`, and `layout` fields for one selected element.
+- Structural AI proposals use typed `StructureOperation` objects; raw `children` and `parentId` property paths remain blocked.
+- Proposal batches are temporary UI state and are not persisted yet.
+- Persistence, reset behavior, and a full history recovery UI remain Step 6 work.
+- There is no backend, authentication, payment integration, or external API call.
 
 ## Next Three Prioritized Improvements
 
-1. Add Step 4 design inspector controls that create commands.
-2. Add Step 5 AI/code proposal flows that use the same executor.
-3. Add Step 6 persistence and reset/recovery behavior.
+1. Add Step 6 localStorage persistence and reset/recovery behavior.
+2. Expand history UI for browsing and restoring scoped entries.
+3. Add richer deterministic scenarios or replace them later with a real proposal service behind the same command boundary.

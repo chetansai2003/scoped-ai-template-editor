@@ -6,7 +6,10 @@ import {
 import {
   selectActivePanel,
 } from "../store/selectors";
+import { AIInstructionPanel } from "../ai/AIInstructionPanel";
+import { CodePanel } from "./CodePanel";
 import { DesignInspector } from "./DesignInspector";
+import { HistoryPanel } from "./HistoryPanel";
 
 const tabs: Array<{ id: EditorPanel; label: string }> = [
   { id: "design", label: "Design" },
@@ -23,7 +26,7 @@ export function RightPanel() {
     <aside className="right-panel" aria-label="Right panel">
       <div className="panel-heading">
         <span>Inspector</span>
-        <small>Step 4 manual editing</small>
+        <small>Manual, code, AI, and history tools</small>
       </div>
 
       <div className="tab-list" role="tablist" aria-label="Inspector sections">
@@ -54,33 +57,15 @@ export function RightPanel() {
         )}
 
         {activePanel === "ai" && (
-          <>
-            <h2>AI Edit</h2>
-            <p>
-              AI proposal creation will be implemented in Step 5. This panel is
-              intentionally non-functional in Step 4.
-            </p>
-          </>
+          <AIInstructionPanel />
         )}
 
         {activePanel === "code" && (
-          <>
-            <h2>Code</h2>
-            <p>
-              JSON code editing and shared-state synchronization will be
-              implemented in Step 5.
-            </p>
-          </>
+          <CodePanel />
         )}
 
         {activePanel === "history" && (
-          <>
-            <h2>History</h2>
-            <p>
-              Per-element and per-viewport recovery will be implemented in a
-              later step. Step 4 manual edits already create scoped history.
-            </p>
-          </>
+          <HistoryPanel />
         )}
       </section>
     </aside>

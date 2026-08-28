@@ -4,3 +4,7 @@ import type { ValidatedCommitPayload } from "./commandTypes";
 export const commitValidatedTemplateChange = createAction<ValidatedCommitPayload>(
   "commands/commitValidatedTemplateChange",
 );
+
+export const resetEditor = createAction(
+  "commands/resetEditor",
+);

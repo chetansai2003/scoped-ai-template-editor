@@ -9,7 +9,9 @@
 - `src/renderer`: Step 2 recursive template renderer components and styles.
 - `src/commands`: Step 3 command schemas, validation, executor, structure validator, and restore helper.
 - `src/history`: Step 3 scoped history selectors.
-- Future AI, persistence, and larger history UI folders should be added only when those steps are implemented.
+- `src/code`: Step 5 CodeMirror parsing, validation, diffing, and command creation helpers.
+- `src/ai`: Step 5 deterministic local proposal types, schemas, engine, acceptance helpers, and AI panel.
+- Future persistence and larger history UI folders should be added only when those steps are implemented.
 - Do not create empty placeholder files for future features.
 
 ## Commands
@@ -56,8 +58,8 @@ npm run build
 
 - No backend.
 - No real AI API.
-- No localStorage persistence in Step 3.
-- No inspector editing controls, inline canvas editing, drag/drop, CodeMirror behavior, AI proposal generation, or proposal acceptance in Step 3.
+- No localStorage persistence in Step 5.
+- No real AI API, backend, authentication, full-template code editing, arbitrary JSX/HTML editing, or proposal auto-apply in Step 5.
 - Preserve the canonical template model as the source of truth for the renderer and layers.
 - Preserve the command executor as the only committed-edit boundary.
 - Inspect existing files before modifying them.
@@ -71,5 +73,7 @@ npm run build
 - The editor shell is responsive and professional.
 - The renderer and layers read from canonical template state.
 - Valid template changes use the command executor, revision tokens, atomic commits, and scoped history.
+- Code edits and accepted deterministic AI proposal items use the same command executor.
+- Invalid code drafts, rejected proposals, stale proposals, and invalid proposals do not mutate template state.
 - Documentation is accurate and does not claim unfinished features work.
 - Relevant checks pass before declaring completion.

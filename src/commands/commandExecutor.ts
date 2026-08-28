@@ -79,7 +79,11 @@ export function buildValidatedCommitPayload(
   currentSelectedIds: ElementId[],
 ): ValidatedCommitBuildResult {
   if (isRawStructureCommand(rawCommand)) {
-    return buildValidatedStructureCommitPayload(rawCommand, template);
+    return buildValidatedStructureCommitPayload(
+      rawCommand,
+      template,
+      currentSelectedIds,
+    );
   }
 
   const parsedCommand = editCommandSchema.safeParse(rawCommand);
@@ -169,6 +173,7 @@ export function buildValidatedCommitPayload(
 function buildValidatedStructureCommitPayload(
   rawCommand: unknown,
   template: TemplateDocument,
+  currentSelectedIds: ElementId[],
 ): ValidatedCommitBuildResult {
   const parsedCommand = structureCommandSchema.safeParse(rawCommand);
 
@@ -177,6 +182,15 @@ function buildValidatedStructureCommitPayload(
   }
 
   const command = parsedCommand.data as StructureCommand;
+
+  const aiAuthorityError = validateStructureAiAuthority(
+    command,
+    currentSelectedIds,
+  );
+
+  if (aiAuthorityError) {
+    return { ok: false, error: aiAuthorityError };
+  }
 
   if (command.viewportScope !== "all") {
     return fail(
@@ -246,6 +260,50 @@ function buildValidatedStructureCommitPayload(
   }
 
   return { ok: true, payload };
+}
+
+function validateStructureAiAuthority(
+  command: StructureCommand,
+  currentSelectedIds: ElementId[],
+): CommandError | null {
+  if (command.source !== "ai") {
+    return null;
+  }
+
+  if (!command.selectedIdsSnapshot) {
+    return {
+      code: "AI_SELECTION_REQUIRED",
+      message: "AI structural commands require the selected IDs snapshot captured at proposal time.",
+    };
+  }
+
+  const authorizedId = getStructureAuthorityElementId(command.operation);
+  const snapshot = new Set(command.selectedIdsSnapshot);
+  const currentSelection = new Set(currentSelectedIds);
+
+  if (!snapshot.has(authorizedId) || !currentSelection.has(authorizedId)) {
+    return {
+      code: "AI_TARGET_UNAUTHORIZED",
+      message: "AI structural command target is outside proposal-time or current selection authority.",
+      elementId: authorizedId,
+    };
+  }
+
+  return null;
+}
+
+function getStructureAuthorityElementId(operation: StructureOperation): ElementId {
+  switch (operation.type) {
+    case "reorder":
+    case "move":
+      return operation.elementId;
+    case "duplicate":
+      return operation.sourceElementId;
+    case "add":
+      return operation.parentId;
+    case "restoreStructure":
+      return Object.keys(operation.beforeElements)[0] ?? "";
+  }
 }
 
 type StructureApplyResult =
