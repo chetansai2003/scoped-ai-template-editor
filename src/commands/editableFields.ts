@@ -20,10 +20,7 @@ const textStyleFields = [
   "style.textAlign",
 ] as const;
 
-const commonLayoutFields = [
-  "layout.align",
-  "layout.columns",
-  "layout.gap",
+const sizeAndPositionFields = [
   "layout.height",
   "layout.margin",
   "layout.maxWidth",
@@ -32,21 +29,32 @@ const commonLayoutFields = [
   "layout.offsetX",
   "layout.offsetY",
   "layout.padding",
-  "layout.variant",
   "layout.visible",
   "layout.width",
 ] as const;
 
+const flexLayoutFields = [
+  "layout.align",
+  "layout.gap",
+  ...sizeAndPositionFields,
+  "layout.variant",
+] as const;
+
 export const editableFieldRegistry: EditableFieldRegistry = {
   page: new Set(["style.background", "layout.variant"]),
-  section: new Set([...boxStyleFields, ...commonLayoutFields]),
-  container: new Set([...boxStyleFields, ...commonLayoutFields]),
-  stack: new Set([...boxStyleFields, ...commonLayoutFields]),
+  section: new Set([
+    ...boxStyleFields,
+    ...flexLayoutFields,
+    "layout.columns",
+  ]),
+  container: new Set([...boxStyleFields, ...flexLayoutFields]),
+  stack: new Set([...boxStyleFields, ...flexLayoutFields]),
   text: new Set([
     "content.text",
     "content.role",
     ...textStyleFields,
-    ...commonLayoutFields,
+    ...sizeAndPositionFields,
+    "layout.variant",
   ]),
   button: new Set([
     "content.text",
@@ -59,12 +67,37 @@ export const editableFieldRegistry: EditableFieldRegistry = {
     "style.radius",
     "style.shadow",
     "style.textAlign",
-    ...commonLayoutFields,
+    ...sizeAndPositionFields,
+    "layout.variant",
   ]),
-  image: new Set(["content.alt", "content.src", ...boxStyleFields, ...commonLayoutFields]),
-  card: new Set([...boxStyleFields, "style.color", ...commonLayoutFields]),
-  badge: new Set(["content.text", ...textStyleFields, ...commonLayoutFields]),
-  stat: new Set(["content.text", "content.label", ...textStyleFields, ...commonLayoutFields]),
+  image: new Set([
+    "content.alt",
+    "content.src",
+    ...boxStyleFields,
+    ...sizeAndPositionFields,
+    "layout.variant",
+  ]),
+  card: new Set([
+    ...boxStyleFields,
+    "style.color",
+    ...sizeAndPositionFields,
+    "layout.gap",
+    "layout.variant",
+  ]),
+  badge: new Set([
+    "content.text",
+    ...textStyleFields,
+    ...sizeAndPositionFields,
+    "layout.variant",
+  ]),
+  stat: new Set([
+    "content.text",
+    "content.label",
+    ...textStyleFields,
+    ...sizeAndPositionFields,
+    "layout.gap",
+    "layout.variant",
+  ]),
   nav: new Set([
     "content.text",
     "style.background",
@@ -74,8 +107,10 @@ export const editableFieldRegistry: EditableFieldRegistry = {
     "style.fontWeight",
     "style.radius",
     "style.shadow",
-    "style.textAlign",
-    ...commonLayoutFields,
+    ...sizeAndPositionFields,
+    "layout.align",
+    "layout.gap",
+    "layout.variant",
   ]),
 };
 

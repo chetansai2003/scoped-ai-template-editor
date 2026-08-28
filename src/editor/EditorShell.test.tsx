@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { describe, expect, it } from "vitest";
@@ -380,6 +380,61 @@ describe("EditorShell", () => {
     expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
   });
 
+  it("shows measured auto dimensions and commits fixed width and height", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+    const renderedButton = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-secondary-cta"]',
+    );
+
+    expect(renderedButton).not.toBeNull();
+    Object.defineProperty(renderedButton, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          bottom: 52,
+          height: 52,
+          left: 0,
+          right: 184,
+          top: 0,
+          width: 184,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }) satisfies DOMRect,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Hero Secondary CTA, hero-secondary-cta",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Rendered element size")).toHaveTextContent(
+        "184 x 52 px",
+      );
+      expect(screen.getByLabelText("Width")).toHaveValue(184);
+      expect(screen.getByLabelText("Height")).toHaveValue(52);
+    });
+
+    fireEvent.change(screen.getByLabelText("Width"), { target: { value: "260" } });
+    expect(renderedButton?.style.getPropertyValue("--element-width")).toBe("260px");
+    fireEvent.blur(screen.getByLabelText("Width"));
+
+    fireEvent.change(screen.getByLabelText("Height"), { target: { value: "72" } });
+    expect(renderedButton?.style.getPropertyValue("--element-height")).toBe("72px");
+    fireEvent.blur(screen.getByLabelText("Height"));
+
+    expect(store.getState().template.elements["hero-secondary-cta"].layout.width).toBe(
+      260,
+    );
+    expect(store.getState().template.elements["hero-secondary-cta"].layout.height).toBe(
+      72,
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(2);
+  });
+
   it("applies inspector radius, padding, and alignment only to the selected element", async () => {
     const user = userEvent.setup();
     const { store } = renderEditor();
@@ -389,7 +444,7 @@ describe("EditorShell", () => {
     );
 
     const radiusInput = screen.getByLabelText("Border radius");
-    fireEvent.change(radiusInput, { target: { value: "18px" } });
+    fireEvent.change(radiusInput, { target: { value: "18" } });
     const radiusField = radiusInput.closest(".inspector-field");
     expect(radiusField).not.toBeNull();
     await user.click(
@@ -397,7 +452,7 @@ describe("EditorShell", () => {
     );
 
     const paddingInput = screen.getByLabelText("Padding");
-    fireEvent.change(paddingInput, { target: { value: "8px 12px" } });
+    fireEvent.change(paddingInput, { target: { value: "8 12" } });
     const paddingField = paddingInput.closest(".inspector-field");
     expect(paddingField).not.toBeNull();
     await user.click(

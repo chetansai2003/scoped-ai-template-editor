@@ -15,6 +15,7 @@
   font-weight: var(--element-font-weight, inherit);
   min-width: var(--element-min-width, initial);
   min-height: var(--element-min-height, initial);
+  max-width: var(--element-max-width, none);
   width: var(--element-width, auto);
   height: var(--element-height, auto);
   margin: var(--element-margin, 0);
@@ -60,8 +61,8 @@
   top: 0;
   z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: var(--element-align, center);
+  gap: var(--element-gap, 20px);
   width: var(--element-width, 100%);
   min-height: var(--element-min-height, var(--element-height, initial));
   padding: var(--element-padding, 18px 40px);
@@ -73,12 +74,13 @@
   margin-right: auto;
   color: inherit;
   font-size: inherit;
+  font-weight: var(--element-font-weight, 700);
 }
 
 .rendered-nav span {
   color: inherit;
   font-size: inherit;
-  font-weight: 700;
+  font-weight: var(--element-font-weight, 700);
 }
 
 .rendered-section {
@@ -112,7 +114,7 @@
 
 .rendered-card {
   display: grid;
-  gap: 14px;
+  gap: var(--element-gap, 14px);
   padding: var(--element-padding, 24px);
 }
 
@@ -159,7 +161,7 @@
 
 .rendered-stat {
   display: grid;
-  gap: 4px;
+  gap: var(--element-gap, 4px);
   min-height: var(--element-min-height, var(--element-height, 96px));
   padding: var(--element-padding, 20px);
   background: var(--element-background, #ffffff);

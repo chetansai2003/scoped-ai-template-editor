@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 test.describe('Scoped AI Template Editor reviewer journeys', () => {
   test.beforeEach(async ({ page }) => {
@@ -79,12 +79,56 @@ test.describe('Scoped AI Template Editor reviewer journeys', () => {
     // It depends on the exact order, but we can verify it doesn't say "History Test 2" anymore.
     await expect(page.locator('.editor-main')).not.toContainText('History Test 2');
   });
+
+  test('design inspector shows natural size and applies visual dimensions', async ({ page }) => {
+    await page.locator('.layer-row', { hasText: 'Hero Secondary CTA' }).click();
+
+    const sizeReadout = page.getByLabel('Rendered element size');
+    const widthField = page.getByRole('spinbutton', { name: 'Width', exact: true });
+    const heightField = page.getByRole('spinbutton', { name: 'Height', exact: true });
+    const renderedButton = page.locator('[data-element-id="hero-secondary-cta"]');
+
+    await expect(sizeReadout).toContainText(/\d+ x \d+ px/);
+    await expect(widthField).not.toHaveValue('');
+    await expect(heightField).not.toHaveValue('');
+
+    await widthField.fill('280');
+    await applyInspectorField(widthField);
+    await heightField.fill('72');
+    await expect(heightField).toHaveValue('72');
+    await expect.poll(() =>
+      renderedButton.evaluate((element) =>
+        element.style.getPropertyValue('--element-height'),
+      ),
+    ).toBe('72px');
+    await applyInspectorField(heightField);
+
+    await expect(renderedButton).toHaveCSS('width', '280px');
+    await expect.poll(() =>
+      renderedButton.evaluate((element) =>
+        element.style.getPropertyValue('--element-height'),
+      ),
+    ).toBe('72px');
+    await expect(renderedButton).toHaveCSS('height', '72px');
+
+    const radiusField = page.getByLabel('Border radius');
+    await radiusField.fill('16');
+    await applyInspectorField(radiusField);
+    await expect(renderedButton).toHaveCSS('border-radius', '16px');
+  });
 });
 
 async function applyTextDraft(page: Page, text: string) {
   const textField = page.locator('#inspector-content-text');
   await textField.fill(text);
   await textField
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " inspector-field ")]')
+    .getByRole('button', { name: 'Apply' })
+    .click();
+}
+
+async function applyInspectorField(field: Locator) {
+  await field
     .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " inspector-field ")]')
     .getByRole('button', { name: 'Apply' })
     .click();

@@ -138,7 +138,7 @@ textarea:focus-visible {
 
 .editor-workspace {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-columns: 220px minmax(0, 1fr) minmax(340px, 380px);
   min-height: 0;
 }
 
