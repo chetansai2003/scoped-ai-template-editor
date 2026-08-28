@@ -9,7 +9,7 @@ export default defineConfig({
     fileParallelism: false,
     globals: true,
     maxWorkers: 1,
-    pool: "threads",
+    pool: "forks",
     setupFiles: "./vitest.setup.ts",
   },
 });

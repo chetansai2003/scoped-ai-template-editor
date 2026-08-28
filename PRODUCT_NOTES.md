@@ -1,15 +1,16 @@
 # Product Notes
 
-## Implemented Through Step 5
+## Implemented
 
-- Primary user: a reviewer or builder validating a scoped AI template editor.
-- Element: a stable JSON model node with content, style, layout, viewport overrides, children, and revisions.
-- Command boundary: canvas, inspector, code, accepted AI, and restore edits use the central executor.
-- Code editing: one selected element, one focused scope, explicit Apply, local drafts, and no full-template edits.
-- AI proposals: deterministic local scenarios create typed proposal batches for review only.
-- Proposal acceptance: each pending item is accepted or rejected independently.
-- Stale protection: changed revision tokens mark only affected proposal items stale.
-- Authority protection: accepted AI items must still be selected and must be in the proposal-time selection snapshot.
+- Primary user: a reviewer or builder evaluating a scoped AI template editor.
+- Durable state: a JSON-serializable canonical template document in Redux.
+- Rendering: one Northstar Studio template tree drives canvas and layers.
+- Responsive behavior: desktop, tablet, and mobile use base values plus viewport overrides.
+- Safe edits: manual, code, accepted AI, and restore operations pass through the command executor.
+- History: committed changes create per-element, per-viewport entries; restore creates a new command.
+- Code editing: one selected element, one focused scope, explicit Apply, local drafts, no full-template editing.
+- AI proposals: deterministic local scenarios produce reviewable proposal batches; generation never mutates template/history.
+- Persistence: committed template/history state saves to localStorage; reset requires confirmation and clears persisted state.
 
 ## Supported AI Instructions
 
@@ -20,17 +21,19 @@
 - `Make the selected cards compact`
 - `Add a payment system`
 
-## Current Cuts And Assumptions
+## Important Boundaries
 
 - AI is deterministic local logic, not a real LLM.
-- CodeMirror edits only exposed editable `content`, `style`, and `layout` fields for one selected element.
-- Structural AI proposals use typed `StructureOperation` objects; raw `children` and `parentId` property paths remain blocked.
-- Proposal batches are temporary UI state and are not persisted yet.
-- Persistence, reset behavior, and a full history recovery UI remain Step 6 work.
-- There is no backend, authentication, payment integration, or external API call.
+- Proposal acceptance revalidates selection authority and revision tokens.
+- Structural AI proposals use typed `StructureOperation` objects, never raw `children` or `parentId` paths.
+- Inspector and CodeMirror drafts are local until Apply.
+- Pointer movement during resize/position is local until pointer release.
+- Invalid JSON, invalid commands, stale proposals, corrupted persistence, and failed restores leave canonical state intact.
 
-## Next Three Prioritized Improvements
+## Current Cuts
 
-1. Add Step 6 localStorage persistence and reset/recovery behavior.
-2. Expand history UI for browsing and restoring scoped entries.
-3. Add richer deterministic scenarios or replace them later with a real proposal service behind the same command boundary.
+- No backend, authentication, real AI API, payment integration, or deployment automation.
+- No arbitrary HTML/JSX editing.
+- No full-template JSON editor.
+- No multi-user collaboration or remote storage.
+- The Vite chunk-size warning is treated as informational; no reviewer-visible performance issue was identified during Step 7 checks.

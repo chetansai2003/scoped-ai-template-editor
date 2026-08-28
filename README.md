@@ -1,25 +1,21 @@
 # Scoped AI Template Editor
 
-Browser-based template editor for the Scoped AI Template Editor assignment. The app renders the original `Northstar Studio` landing page from canonical JSON state and now supports validated manual edits, selected-element code edits, and deterministic local AI proposals through one command executor.
+Browser-based React/TypeScript editor for the Scoped AI Template Editor assignment. The app renders the `Northstar Studio` landing page from a canonical JSON template model and routes manual edits, selected-element code edits, accepted deterministic AI proposals, and history restores through one validated command pipeline.
 
-## Step 5 Status
+## Current Status
 
-Implemented through Step 5:
+Implemented through Step 6, with Step 7 submission readiness in place:
 
+- Professional editor shell with toolbar, layers, canvas, right panel, proposal drawer, persistence notice, and reset dialog.
 - Canonical `TemplateDocument` in Redux as the durable source of truth.
-- Responsive renderer and layers panel powered by stable element IDs.
-- Typed command executor with Zod validation, revision tokens, stale protection, atomic commits, and scoped history.
-- Manual Step 4 canvas/inspector edits that use the same executor.
-- Selected-element CodeMirror JSON editing for focused `content`, `style`, or `layout` values.
-- Code drafts remain local; invalid JSON never mutates Redux.
-- Deterministic local AI scenario engine with typed proposal batches and proposal items.
-- Proposal drawer with before/after review, independent Accept/Reject, stale handling, and invalid-item handling.
+- Recursive responsive renderer powered by stable element IDs and desktop/tablet/mobile overrides.
+- Zod-validated command executor with editable-property boundaries, revision tokens, stale protection, atomic commits, scoped history, and restore-as-new-command.
+- Manual canvas selection, inline text editing, design inspector edits, resize/position commits, visibility edits, and typed structural operations.
+- Selected-element CodeMirror JSON editing for one focused `content`, `style`, or `layout` scope.
+- Deterministic local AI proposal scenarios with before/after review, independent Accept/Reject, stale/invalid handling, and no auto-apply.
+- localStorage persistence for committed template/history state, corrupted-state recovery fallback, scoped history UI, and confirmed reset behavior.
 
-Not implemented yet:
-
-- Real LLM/API calls, backend services, authentication, or arbitrary generated code.
-- Full-template JSON editing.
-- localStorage persistence, reset persistence behavior, and full recovery UI.
+Not implemented: real LLM/API calls, backend/auth, full-template JSON editing, arbitrary HTML/JSX editing, deployment automation, or collaboration/multi-user workflows.
 
 ## Commands
 
@@ -29,27 +25,48 @@ npm run dev
 npm run typecheck
 npm run lint
 npm run test:run
+npx playwright test
 npm run build
 ```
 
 ## Architecture
 
-Current Step 5 flow:
-
 ```text
-Canvas / Inspector / Code / Accepted AI
+Canvas / Inspector / Code / Accepted AI / Restore
 -> typed command
--> Zod + scope + revision + old-value validation
+-> Zod schema + editable boundary + scope + revision + oldValue validation
 -> one validated Redux commit
 -> canonical template + scoped history
--> renderer, layers, code panel, and proposal UI read updated state
+-> renderer, layers, code panel, proposal drawer, history UI, and persistence
 ```
 
-CodeMirror text and AI proposals are temporary UI state. They do not become durable template state unless an accepted command passes the existing executor.
+The DOM renders the model only. It is never the durable source of truth. CodeMirror drafts, inline text drafts, pointer-move geometry, and AI proposal batches are temporary UI state until a validated command succeeds.
+
+## Template Model
+
+The canonical model lives in `src/template` and stores metadata, root element ID, viewport settings, and an element dictionary. Each element has a stable ID, type, name, parent, ordered children, content, style, layout, overrides, and revision counters.
+
+Responsive values use base values plus explicit viewport overrides:
+
+```text
+resolved value = overrides[activeViewport]?.scope[field] ?? base scope[field]
+```
+
+Every element has `children: []`, including leaves, so renderer and layers traverse one deterministic tree.
+
+## Editing Behavior
+
+- Normal selection replaces the current selection; Ctrl/Cmd/Shift toggles multi-selection.
+- Inspector edits are local drafts until the field's Apply button is clicked.
+- Inline text drafts commit on Enter or blur, cancel on Escape, and do not create history if unchanged.
+- Resize/position pointer movement is local preview state; pointer release creates one layout command.
+- Structural operations are typed commands and all-viewports only.
+- Soft hide/show is `layout.visible` and can be viewport-specific.
+- Reset requires confirmation and clears persisted template/history state.
 
 ## Code Editing
 
-The Code tab supports exactly one selected element. It shows one focused JSON object at a time:
+The Code tab supports exactly one selected element and one scope at a time:
 
 ```json
 {
@@ -59,7 +76,7 @@ The Code tab supports exactly one selected element. It shows one focused JSON ob
 }
 ```
 
-Use **Apply Changes** to commit. For viewport-specific edits, the draft displays resolved values, compares `oldValue` against the resolved value, and writes only changed override fields.
+Apply parses JSON, validates the focused scope, diffs editable fields, and dispatches normal `source: "code"` commands. Invalid JSON or protected fields leave the last valid template untouched.
 
 ## Deterministic AI Scenarios
 
@@ -72,19 +89,40 @@ Supported local instructions:
 - `Make the selected cards compact`
 - `Add a payment system`
 
-The AI engine is deterministic and local. It does not call an API, dispatch Redux actions, use randomness, or auto-apply changes. `Add a payment system` returns unsupported feedback because payments require backend/integration work outside Step 5.
+The engine is deterministic and local. It does not call an API, generate random IDs, mutate state during generation, or auto-apply proposals. Payment requests return unsupported feedback because they require backend/integration work.
 
-## Proposal Rules
+## Requirement Evidence
 
-Generated proposal items store revision tokens and the proposal-time selected IDs. Accepting an item rechecks revisions and current selection authority. Stale or invalid items never mutate the template. Rejecting an item changes proposal UI state only.
+| Requirement | Evidence |
+| --- | --- |
+| Canonical model powers canvas/layers | `src/template`, `src/renderer`, `src/editor/LayersPanel.tsx` |
+| Stable editable IDs | Northstar template IDs and `data-element-id` renderer attributes |
+| Responsive base plus overrides | `resolveResponsiveValue` tests and viewport switching UI |
+| One safe edit pipeline | `src/commands/commandExecutor.ts` and command tests |
+| Invalid/stale data never mutates state | command, code, AI, and persistence tests |
+| Manual visual editing | canvas, inline editor, design inspector, structure controls |
+| Code edits update same state/canvas | CodePanel and code diff tests |
+| AI proposals reviewed before apply | AI scenario/proposal tests and drawer UI |
+| Persistence/reset/recovery | persistence unit tests and Playwright reviewer journeys |
+| Reviewer readiness | `docs/REVIEWER_DEMO.md`, `docs/QA_CHECKLIST.md`, automated checks |
 
-## Verification
+## Vercel Readiness
 
-Run before declaring Step 5 complete:
+No environment variables are required. Use:
 
-```bash
-npm run typecheck
-npm run lint
-npm run test:run
-npm run build
-```
+- Framework preset: Vite
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+No deployment has been performed from this repository by Codex.
+
+## Verification Results
+
+Latest Step 7 verification:
+
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run test:run` passed: 78 Vitest tests.
+- `npx playwright test` passed: 3 Chromium tests after installing Playwright Chromium locally.
+- `npm run build` passed with a non-blocking Vite chunk-size warning.

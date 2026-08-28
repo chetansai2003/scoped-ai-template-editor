@@ -150,7 +150,7 @@ export function SelectionOverlay({
             }}
           >
             <span className="selection-label">
-              {rect.name} · {rect.id}
+              {rect.name} - {rect.id}
             </span>
             {canResize ? (
               <button

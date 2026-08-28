@@ -1,29 +1,34 @@
-# QA Checklist for Step 6
+# QA Checklist
 
-## 1. Persistence & Hydration
-- [ ] Make a valid edit in the editor, refresh the page, and verify the edit survives.
-- [ ] Simulate corrupted state: open DevTools Application tab, edit `scoped-ai-editor:v1` to be `{ invalid }`, refresh the page. Verify it gracefully falls back to the original template without crashing.
-- [ ] Verify that selecting elements, switching viewports, or typing an inline draft does *not* write to `localStorage`. Only clicking "Apply" or pressing Enter to commit the text writes to storage.
+## Automated Evidence
 
-## 2. Reset Behavior
-- [ ] Make a valid edit.
-- [ ] Click the "Reset" button in the top right.
-- [ ] Cancel the dialog. Verify your edits are still there.
-- [ ] Click "Reset" again and confirm. Verify the template returns to the original seed.
-- [ ] Check `localStorage` in DevTools to confirm the persistence key is completely removed after reset.
+- [x] `npm run typecheck` passed.
+- [x] `npm run lint` passed.
+- [x] `npm run test:run` passed: 78 Vitest tests.
+- [x] `npx playwright test` passed: 3 Chromium reviewer-journey tests.
+- [x] `npm run build` passed with a non-blocking Vite chunk-size warning.
 
-## 3. History & Scoped Restore
-- [ ] Make an edit on the desktop viewport (e.g. change text).
-- [ ] Make a second edit on the mobile viewport only (e.g. change color).
-- [ ] Select the edited element and go to the "History" tab.
-- [ ] Switch the history scope to "Mobile". Verify you see the mobile-only color change.
-- [ ] Click "Restore" on an older history entry. Verify the canvas updates to the previous state.
+## Reviewer Journey Checks
 
-## 4. Accessibility
-- [ ] Use only the `Tab` key to navigate the editor interface. Verify all buttons, inputs, and tabs have a visible blue focus outline.
-- [ ] Open the Reset dialog. Verify `Escape` closes the dialog.
-- [ ] Verify the Persistence Notice toast (which appears on errors or reset) is announced to screen readers (`aria-live`).
+- [x] Valid inspector edit persists across reload.
+- [x] Reset dialog cancel preserves edits.
+- [x] Confirm Reset removes edits and restored defaults survive reload.
+- [x] History panel can restore an older committed state.
+- [ ] At about 1280px width, toolbar, sidebars, canvas, and drawer avoid horizontal overflow.
+- [ ] Desktop, Tablet, and Mobile preview controls resize the canvas frame cleanly.
+- [ ] Canvas selection overlay is visible and not color-only.
+- [ ] Keyboard focus is visible on toolbar, layers, tabs, inspector fields, proposal controls, history controls, and reset dialog buttons.
+- [ ] Escape clears selection from canvas/layers and closes the Reset dialog.
+- [ ] Invalid CodeMirror JSON keeps the draft visible and leaves the canvas unchanged.
+- [ ] Unsupported AI instruction `Add a payment system` shows safe unsupported feedback and creates no mutation.
+- [ ] AI Accept/Reject can leave one item accepted, one rejected, and one pending.
+- [ ] Manual edit after proposal generation marks only affected proposal items stale.
+- [ ] Mobile-only edit affects Mobile while Desktop and Tablet remain protected.
+- [ ] Persistence notice uses `aria-live` for reset/recovery messages.
 
-## 5. Responsive Quality
-- [ ] Resize the browser window to ~1280px. Verify the editor toolbars and sidebars do not break or horizontally scroll.
-- [ ] Switch the preview mode to Mobile. Verify the canvas frame narrows cleanly and remains centered.
+## Repository Hygiene
+
+- [x] `git diff --check` has no whitespace errors beyond line-ending warnings.
+- [x] No likely secret values were found in tracked source/config/docs.
+- [x] No accidental development-only logging statements remain.
+- [x] No fake deployment links, fake screenshots, or fabricated verification claims are documented.
