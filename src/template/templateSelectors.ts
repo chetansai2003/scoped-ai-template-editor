@@ -10,6 +10,9 @@ import type {
   ViewportSetting,
 } from "./templateTypes";
 
+const emptyTemplateElements: TemplateElement[] = [];
+const emptyResolvedTemplateElements: ResolvedTemplateElement[] = [];
+
 export const selectTemplateDocument = (state: RootState): TemplateDocument =>
   state.template;
 
@@ -37,15 +40,18 @@ export const selectOrderedTemplateTree = createSelector(
   },
 );
 
-export const selectSelectedTemplateElements = (
-  state: RootState,
-): TemplateElement[] => {
-  const template = selectTemplateDocument(state);
+export const selectSelectedTemplateElements = createSelector(
+  [selectTemplateDocument, (state: RootState) => state.editorUI.selectedIds],
+  (template, selectedIds): TemplateElement[] => {
+    if (selectedIds.length === 0) {
+      return emptyTemplateElements;
+    }
 
-  return state.editorUI.selectedIds
-    .map((id) => template.elements[id])
-    .filter((element): element is TemplateElement => Boolean(element));
-};
+    return selectedIds
+      .map((id) => template.elements[id])
+      .filter((element): element is TemplateElement => Boolean(element));
+  },
+);
 
 export const selectResolvedElementById = (
   state: RootState,
@@ -60,12 +66,18 @@ export const selectResolvedElementById = (
   return resolveTemplateElement(element, state.editorUI.activeViewport);
 };
 
-export const selectResolvedSelectedTemplateElements = (
-  state: RootState,
-): ResolvedTemplateElement[] =>
-  selectSelectedTemplateElements(state).map((element) =>
-    resolveTemplateElement(element, state.editorUI.activeViewport),
-  );
+export const selectResolvedSelectedTemplateElements = createSelector(
+  [selectSelectedTemplateElements, (state: RootState) => state.editorUI.activeViewport],
+  (selectedElements, activeViewport): ResolvedTemplateElement[] => {
+    if (selectedElements.length === 0) {
+      return emptyResolvedTemplateElements;
+    }
+
+    return selectedElements.map((element) =>
+      resolveTemplateElement(element, activeViewport),
+    );
+  },
+);
 
 export const selectActiveViewportSettings = (
   state: RootState,

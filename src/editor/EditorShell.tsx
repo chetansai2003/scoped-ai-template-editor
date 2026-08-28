@@ -3,6 +3,7 @@ import { LayersPanel } from "./LayersPanel";
 import { ProposalDrawer } from "./ProposalDrawer";
 import { RightPanel } from "./RightPanel";
 import { TopToolbar } from "./TopToolbar";
+import { PersistenceNotice } from "./PersistenceNotice";
 
 export function EditorShell() {
   return (
@@ -16,6 +17,7 @@ export function EditorShell() {
         <RightPanel />
       </div>
       <ProposalDrawer />
+      <PersistenceNotice />
     </div>
   );
 }

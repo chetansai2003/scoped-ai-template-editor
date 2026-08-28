@@ -178,20 +178,59 @@ describe("EditorShell", () => {
     await user.click(screen.getByRole("tab", { name: "History" }));
 
     expect(screen.getByRole("tabpanel")).toHaveTextContent(
-      "Per-element and per-viewport recovery will be implemented",
+      "Select an element to view its history.",
     );
   });
 
-  it("does not present placeholder AI behavior as functional", async () => {
+  it("shows code editing empty and multi-selection states", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      "Select one element to edit its focused JSON.",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+    await user.keyboard("{Control>}");
+    await user.click(
+      screen.getByRole("button", { name: "Hero Body, hero-body" }),
+    );
+    await user.keyboard("{/Control}");
+
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      "Code editing supports one selected element at a time.",
+    );
+  });
+
+  it("shows selected-element CodeMirror editing controls", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+    await user.click(screen.getByRole("tab", { name: "Code" }));
+
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Editing Hero Heading");
+    expect(screen.getByLabelText("Code scope")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply Changes" })).toBeInTheDocument();
+    expect(document.querySelector(".cm-editor")).toBeInTheDocument();
+  });
+
+  it("presents deterministic AI generation without auto-applying", async () => {
     const user = userEvent.setup();
     renderEditor();
 
     await user.click(screen.getByRole("tab", { name: "AI Edit" }));
 
     expect(screen.getByRole("tabpanel")).toHaveTextContent(
-      "intentionally non-functional in Step 4",
+      "Deterministic local scenarios",
     );
-    expect(screen.queryByRole("button", { name: /generate/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate Proposal" })).toBeDisabled();
   });
 
   it("keeps the proposal drawer non-mutating and Step 5 scoped", () => {
@@ -240,29 +279,30 @@ describe("EditorShell", () => {
     );
   });
 
-  it("commits inline text edits through history and cancels with Escape", async () => {
-    const user = userEvent.setup();
+  it("commits inline text edits through history and cancels with Escape", () => {
     const { store } = renderEditor();
 
-    await user.click(
+    fireEvent.click(
       screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
     );
-    await user.click(screen.getByRole("button", { name: "Edit text inline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit text inline" }));
 
     const draft = screen.getByLabelText("Inline text draft");
-    await user.clear(draft);
-    await user.type(draft, "A manually edited launch headline.");
-    await user.keyboard("{Enter}");
+    fireEvent.change(draft, {
+      target: { value: "A manually edited launch headline." },
+    });
+    fireEvent.keyDown(draft, { key: "Enter" });
 
     expect(store.getState().template.elements["hero-heading"].content.text).toBe(
       "A manually edited launch headline.",
     );
     expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
 
-    await user.click(screen.getByRole("button", { name: "Edit text inline" }));
-    await user.clear(screen.getByLabelText("Inline text draft"));
-    await user.type(screen.getByLabelText("Inline text draft"), "Canceled text");
-    await user.keyboard("{Escape}");
+    fireEvent.click(screen.getByRole("button", { name: "Edit text inline" }));
+    fireEvent.change(screen.getByLabelText("Inline text draft"), {
+      target: { value: "Canceled text" },
+    });
+    fireEvent.keyDown(screen.getByLabelText("Inline text draft"), { key: "Escape" });
 
     expect(store.getState().template.elements["hero-heading"].content.text).toBe(
       "A manually edited launch headline.",
@@ -319,15 +359,14 @@ describe("EditorShell", () => {
     expect(store.getState().template.elements["feature-strategy"].layout.visible).toBeUndefined();
   });
 
-  it("keeps resize movement local until pointer release creates one history entry", async () => {
-    const user = userEvent.setup();
+  it("keeps resize movement local until pointer release creates one history entry", () => {
     const { store } = renderEditor();
 
-    await user.click(
+    fireEvent.click(
       screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
     );
 
-    const handle = await screen.findByRole("button", {
+    const handle = screen.getByRole("button", {
       name: "Resize hero-visual-card",
     });
     fireEvent.pointerDown(handle, { clientX: 0, clientY: 0 });

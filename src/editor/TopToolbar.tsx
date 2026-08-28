@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import {
   setActiveViewport,
@@ -10,6 +11,7 @@ import {
   selectEditScope,
   selectTemplateMetadata,
 } from "../store/selectors";
+import { ResetDialog } from "./ResetDialog";
 
 const viewportOptions: Array<{ value: Viewport; label: string }> = [
   { value: "desktop", label: "Desktop" },
@@ -29,6 +31,7 @@ export function TopToolbar() {
   const template = useAppSelector(selectTemplateMetadata);
   const activeViewport = useAppSelector(selectActiveViewport);
   const editScope = useAppSelector(selectEditScope);
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   return (
     <header className="top-toolbar" aria-label="Editor toolbar">
@@ -68,13 +71,15 @@ export function TopToolbar() {
       </label>
 
       <div className="reset-area">
-        <button type="button" className="toolbar-button" disabled>
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => setIsResetOpen(true)}
+        >
           Reset
         </button>
-        <span className="reset-note">
-          Reset will be implemented with persistence in Step 6.
-        </span>
       </div>
+      <ResetDialog isOpen={isResetOpen} onClose={() => setIsResetOpen(false)} />
     </header>
   );
 }

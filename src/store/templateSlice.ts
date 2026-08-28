@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { commitValidatedTemplateChange } from "../commands/commitActions";
+import { commitValidatedTemplateChange, resetEditor } from "../commands/commitActions";
 import { northstarTemplate } from "../template/northstarTemplate";
 import type { TemplateDocument } from "../template/templateTypes";
 
@@ -17,6 +17,10 @@ const templateSlice = createSlice({
       action.payload.removedElementIds?.forEach((elementId) => {
         delete state.elements[elementId];
       });
+    });
+    builder.addCase(resetEditor, () => {
+      // Use structuredClone to create a deep copy of the northstar template
+      return structuredClone(northstarTemplate);
     });
   },
 });

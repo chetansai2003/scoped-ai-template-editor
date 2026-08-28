@@ -111,6 +111,7 @@ export const structureCommandSchema = z
     id: z.string().min(1),
     source: z.enum(["canvas", "code", "ai", "restore"]),
     viewportScope: z.enum(["all", "desktop", "tablet", "mobile"]),
+    selectedIdsSnapshot: z.array(z.string().min(1)).optional(),
     revisionTokens: z.record(z.string(), revisionTokenSchema),
     operation: structureOperationSchema,
     description: z.string().min(1).max(240),

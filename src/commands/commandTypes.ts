@@ -92,6 +92,7 @@ export interface StructureCommand {
   id: string;
   source: EditSource;
   viewportScope: ViewportScope;
+  selectedIdsSnapshot?: ElementId[];
   revisionTokens: Record<ElementId, RevisionToken>;
   operation: StructureOperation;
   description: string;

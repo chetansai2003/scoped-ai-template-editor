@@ -9,3 +9,4 @@ export const selectActivePanel = (state: RootState) =>
   state.editorUI.activePanel;
 export const selectProposalBoundary = (state: RootState) => state.proposal;
 export const selectHistoryBoundary = (state: RootState) => state.history;
+export const selectPersistenceNotice = (state: RootState) => state.editorUI.persistenceNotice;
