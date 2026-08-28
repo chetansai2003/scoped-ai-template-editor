@@ -114,6 +114,9 @@ export function CodePanel() {
       <p>
         Editing {selectedElement.name} <code>{selectedElement.id}</code>
       </p>
+      <p className="field-status">
+        Choose the matching scope, edit the JSON, then click Apply Changes.
+      </p>
       <label className="field-control">
         <span>Code scope</span>
         <select

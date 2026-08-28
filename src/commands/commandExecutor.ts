@@ -156,6 +156,7 @@ export function buildValidatedCommitPayload(
     description: command.description,
     timestamp: command.timestamp,
     targets: validatedTargets,
+    undoOfCommandId: command.undoOfCommandId,
   };
 
   const payloadValidation = validatedCommitPayloadSchema.safeParse(payload);
@@ -248,6 +249,7 @@ function buildValidatedStructureCommitPayload(
     timestamp: command.timestamp,
     targets,
     removedElementIds: operationResult.removedElementIds,
+    undoOfCommandId: command.undoOfCommandId,
   };
 
   const payloadValidation = validatedCommitPayloadSchema.safeParse(payload);

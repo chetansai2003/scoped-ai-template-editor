@@ -36,6 +36,7 @@ export interface EditCommand {
   source: EditSource;
   propertyScope: EditScope;
   viewportScope: ViewportScope;
+  undoOfCommandId?: string;
   selectedIdsSnapshot?: ElementId[];
   targets: TargetEdit[];
   description: string;
@@ -92,6 +93,7 @@ export interface StructureCommand {
   id: string;
   source: EditSource;
   viewportScope: ViewportScope;
+  undoOfCommandId?: string;
   selectedIdsSnapshot?: ElementId[];
   revisionTokens: Record<ElementId, RevisionToken>;
   operation: StructureOperation;
@@ -147,6 +149,7 @@ export interface HistoryEntry {
 
 export interface HistoryState {
   byElement: Record<ElementId, Partial<Record<ViewportScope, HistoryEntry[]>>>;
+  undoneCommandIds: string[];
 }
 
 export interface ValidatedTargetCommit {
@@ -169,4 +172,5 @@ export interface ValidatedCommitPayload {
   timestamp: string;
   targets: ValidatedTargetCommit[];
   removedElementIds?: ElementId[];
+  undoOfCommandId?: string;
 }

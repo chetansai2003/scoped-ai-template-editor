@@ -6,6 +6,7 @@ import type { ViewportScope } from "./editorUISlice";
 
 const initialState: HistoryState = {
   byElement: {},
+  undoneCommandIds: [],
 };
 
 const historySlice = createSlice({
@@ -26,9 +27,16 @@ const historySlice = createSlice({
           ],
         };
       });
+      if (
+        action.payload.undoOfCommandId &&
+        !state.undoneCommandIds.includes(action.payload.undoOfCommandId)
+      ) {
+        state.undoneCommandIds.push(action.payload.undoOfCommandId);
+      }
     });
     builder.addCase(resetEditor, (state) => {
       state.byElement = {};
+      state.undoneCommandIds = [];
     });
   },
 });

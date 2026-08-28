@@ -127,6 +127,7 @@ const historyStateSchema = z.object({
       mobile: z.array(historyEntrySchema).optional(),
     }).strict()
   ),
+  undoneCommandIds: z.array(z.string()).default([]),
 }).strict();
 
 export const PERSISTENCE_KEY = "scoped-ai-editor:v1";

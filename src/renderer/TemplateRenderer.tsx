@@ -1,6 +1,7 @@
 import { useAppSelector } from "../app/hooks";
 import {
   selectActiveViewport,
+  selectPreviewElements,
   selectSelectedIds,
 } from "../store/selectors";
 import { selectTemplateDocument } from "../template/templateSelectors";
@@ -21,6 +22,7 @@ export function TemplateRenderer({
   const template = useAppSelector(selectTemplateDocument);
   const viewport = useAppSelector(selectActiveViewport);
   const selectedIds = useAppSelector(selectSelectedIds);
+  const previewElements = useAppSelector(selectPreviewElements);
 
   return (
     <div className="template-renderer" data-renderer-viewport={viewport}>
@@ -29,6 +31,7 @@ export function TemplateRenderer({
         draftLayouts={draftLayouts}
         onElementKeySelect={onElementKeySelect}
         onElementSelect={onElementSelect}
+        previewElements={previewElements}
         selectedIds={selectedIds}
         template={template}
         viewport={viewport}

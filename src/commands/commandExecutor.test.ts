@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createAppStore } from "../app/store";
-import { selectHistoryForElementScope, selectTotalCommittedHistoryEntries } from "../history/historySelectors";
+import {
+  selectHistoryForElementScope,
+  selectLatestUndoableCommandGroup,
+  selectTotalCommittedHistoryEntries,
+} from "../history/historySelectors";
 import { replaceSelection } from "../store/editorUISlice";
 import { executeCommand, createRevisionToken } from "./commandExecutor";
 import type { EditCommand, JsonValue } from "./commandTypes";
@@ -10,6 +14,7 @@ import {
   createReorderCommand,
 } from "./manualCommandCreators";
 import { createRestoreCommand } from "./restoreCommand";
+import { createUndoCommand } from "./undoCommand";
 
 const timestamp = "2026-08-27T09:30:00.000Z";
 
@@ -789,5 +794,152 @@ describe("command executor", () => {
       originalChildren,
     );
     expect(selectHistoryForElementScope(store.getState(), "features-section", "all")).toHaveLength(2);
+  });
+
+  it("undoes the latest property command using the original before values", () => {
+    const store = createAppStore();
+
+    store.dispatch(
+      executeCommand(
+        commandFromStore(
+          store,
+          "cmd-undo-color",
+          "hero-heading",
+          "style",
+          "all",
+          "style.color",
+          "#152028",
+          "#111111",
+        ),
+      ),
+    );
+
+    const group = selectLatestUndoableCommandGroup(store.getState());
+    expect(group?.commandId).toBe("cmd-undo-color");
+
+    if (!group) {
+      throw new Error("Expected undoable command group");
+    }
+
+    const undo = createUndoCommand(group, store.getState().template, {
+      id: "cmd-global-undo-color",
+      timestamp: "2026-08-27T09:33:00.000Z",
+    });
+
+    expect(undo.ok).toBe(true);
+
+    if (undo.ok) {
+      expect(store.dispatch(executeCommand(undo.command))).toMatchObject({
+        ok: true,
+        commandId: "cmd-global-undo-color",
+      });
+    }
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#152028",
+    );
+    expect(store.getState().history.undoneCommandIds).toContain("cmd-undo-color");
+    expect(selectLatestUndoableCommandGroup(store.getState())).toBeNull();
+  });
+
+  it("undoes a multi-target command as one global command group", () => {
+    const store = createAppStore();
+
+    store.dispatch(
+      executeCommand({
+        id: "cmd-undo-multi",
+        source: "canvas",
+        propertyScope: "style",
+        viewportScope: "all",
+        targets: ["hero-heading", "hero-body"].map((elementId) => {
+          const element = store.getState().template.elements[elementId];
+
+          return {
+            elementId,
+            revisionToken: createRevisionToken(element, "all"),
+            changes: [
+              {
+                path: "style.color",
+                oldValue: element.style.color ?? null,
+                newValue: "#111111",
+              },
+            ],
+          };
+        }),
+        description: "Edit two colors",
+        timestamp,
+      }),
+    );
+
+    const group = selectLatestUndoableCommandGroup(store.getState());
+
+    if (!group) {
+      throw new Error("Expected undoable multi-target group");
+    }
+
+    const undo = createUndoCommand(group, store.getState().template, {
+      id: "cmd-global-undo-multi",
+      timestamp: "2026-08-27T09:34:00.000Z",
+    });
+
+    expect(undo.ok).toBe(true);
+
+    if (undo.ok) {
+      expect(store.dispatch(executeCommand(undo.command))).toMatchObject({
+        ok: true,
+      });
+    }
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#152028",
+    );
+    expect(store.getState().template.elements["hero-body"].style.color).toBe(
+      "#53606b",
+    );
+    expect(store.getState().history.undoneCommandIds).toContain("cmd-undo-multi");
+  });
+
+  it("undoes the latest structural command without skipping it", () => {
+    const store = createAppStore();
+    const originalChildren = [
+      ...store.getState().template.elements["features-section"].children,
+    ];
+    const reorder = createReorderCommand(
+      store.getState().template,
+      "features-section",
+      "feature-design",
+      0,
+      "all",
+    );
+
+    expect(store.dispatch(executeCommand(reorder))).toMatchObject({ ok: true });
+    expect(store.getState().template.elements["features-section"].children[0]).toBe(
+      "feature-design",
+    );
+
+    const group = selectLatestUndoableCommandGroup(store.getState());
+    expect(group?.operationType).toBe("structure");
+
+    if (!group) {
+      throw new Error("Expected undoable structural command group");
+    }
+
+    const undo = createUndoCommand(group, store.getState().template, {
+      id: "cmd-global-undo-structure",
+      timestamp: "2026-08-27T09:35:00.000Z",
+    });
+
+    expect(undo.ok).toBe(true);
+
+    if (undo.ok) {
+      expect(store.dispatch(executeCommand(undo.command))).toMatchObject({
+        ok: true,
+      });
+    }
+
+    expect(store.getState().template.elements["features-section"].children).toEqual(
+      originalChildren,
+    );
+    expect(store.getState().history.undoneCommandIds).toContain(reorder.id);
   });
 });

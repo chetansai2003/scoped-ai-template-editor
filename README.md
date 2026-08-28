@@ -10,7 +10,7 @@ Implemented through Step 6, with Step 7 submission readiness in place:
 - Canonical `TemplateDocument` in Redux as the durable source of truth.
 - Recursive responsive renderer powered by stable element IDs and desktop/tablet/mobile overrides.
 - Zod-validated command executor with editable-property boundaries, revision tokens, stale protection, atomic commits, scoped history, and restore-as-new-command.
-- Manual canvas selection, inline text editing, design inspector edits, resize/position commits, visibility edits, and typed structural operations.
+- Manual canvas selection, inline text editing, live-preview design inspector edits, drag/resize commits, visibility edits, typed structural operations, and global Undo.
 - Selected-element CodeMirror JSON editing for one focused `content`, `style`, or `layout` scope.
 - Deterministic local AI proposal scenarios with before/after review, independent Accept/Reject, stale/invalid handling, and no auto-apply.
 - localStorage persistence for committed template/history state, corrupted-state recovery fallback, scoped history UI, and confirmed reset behavior.
@@ -40,7 +40,7 @@ Canvas / Inspector / Code / Accepted AI / Restore
 -> renderer, layers, code panel, proposal drawer, history UI, and persistence
 ```
 
-The DOM renders the model only. It is never the durable source of truth. CodeMirror drafts, inline text drafts, pointer-move geometry, and AI proposal batches are temporary UI state until a validated command succeeds.
+The DOM renders the model only. It is never the durable source of truth. Design previews, CodeMirror drafts, inline text drafts, pointer-move geometry, and AI proposal batches are temporary UI state until a validated command succeeds.
 
 ## Template Model
 
@@ -57,9 +57,10 @@ Every element has `children: []`, including leaves, so renderer and layers trave
 ## Editing Behavior
 
 - Normal selection replaces the current selection; Ctrl/Cmd/Shift toggles multi-selection.
-- Inspector edits are local drafts until the field's Apply button is clicked.
+- Inspector edits preview live and commit on blur, Enter, or the field's Apply button.
 - Inline text drafts commit on Enter or blur, cancel on Escape, and do not create history if unchanged.
-- Resize/position pointer movement is local preview state; pointer release creates one layout command.
+- Drag/resize pointer movement is local preview state; pointer release creates one layout command.
+- Global Undo restores the latest command group's original before values through the validated command pipeline.
 - Structural operations are typed commands and all-viewports only.
 - Soft hide/show is `layout.visible` and can be viewport-specific.
 - Reset requires confirmation and clears persisted template/history state.
@@ -100,7 +101,7 @@ The engine is deterministic and local. It does not call an API, generate random 
 | Responsive base plus overrides | `resolveResponsiveValue` tests and viewport switching UI |
 | One safe edit pipeline | `src/commands/commandExecutor.ts` and command tests |
 | Invalid/stale data never mutates state | command, code, AI, and persistence tests |
-| Manual visual editing | canvas, inline editor, design inspector, structure controls |
+| Manual visual editing | canvas, inline editor, design inspector, structure controls, global Undo |
 | Code edits update same state/canvas | CodePanel and code diff tests |
 | AI proposals reviewed before apply | AI scenario/proposal tests and drawer UI |
 | Persistence/reset/recovery | persistence unit tests and Playwright reviewer journeys |
@@ -123,6 +124,6 @@ Latest Step 7 verification:
 
 - `npm run typecheck` passed.
 - `npm run lint` passed.
-- `npm run test:run` passed: 78 Vitest tests.
+- `npm run test:run` passed: 90 Vitest tests.
 - `npx playwright test` passed: 3 Chromium tests after installing Playwright Chromium locally.
 - `npm run build` passed with a non-blocking Vite chunk-size warning.

@@ -7,10 +7,10 @@
 - Rendering: one Northstar Studio template tree drives canvas and layers.
 - Responsive behavior: desktop, tablet, and mobile use base values plus viewport overrides.
 - Safe edits: manual, code, accepted AI, and restore operations pass through the command executor.
-- History: committed changes create per-element, per-viewport entries; restore creates a new command.
+- History: committed changes create per-element, per-viewport entries; restore and global Undo create new validated commands.
 - Code editing: one selected element, one focused scope, explicit Apply, local drafts, no full-template editing.
 - AI proposals: deterministic local scenarios produce reviewable proposal batches; generation never mutates template/history.
-- Persistence: committed template/history state saves to localStorage; reset requires confirmation and clears persisted state.
+- Persistence: committed template/history state and durable undo metadata save to localStorage; reset requires confirmation and clears persisted state.
 
 ## Supported AI Instructions
 
@@ -26,8 +26,9 @@
 - AI is deterministic local logic, not a real LLM.
 - Proposal acceptance revalidates selection authority and revision tokens.
 - Structural AI proposals use typed `StructureOperation` objects, never raw `children` or `parentId` paths.
-- Inspector and CodeMirror drafts are local until Apply.
-- Pointer movement during resize/position is local until pointer release.
+- Inspector changes preview live and commit on blur, Enter, or Apply.
+- Pointer movement during drag/resize is local until pointer release.
+- Undo restores the latest command group's original before values; it does not directly mutate template state.
 - Invalid JSON, invalid commands, stale proposals, corrupted persistence, and failed restores leave canonical state intact.
 
 ## Current Cuts

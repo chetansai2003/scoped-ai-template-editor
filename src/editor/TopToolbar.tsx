@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import {
   setActiveViewport,
   setEditScope,
+  setPersistenceNotice,
   type ViewportScope,
 } from "../store/editorUISlice";
 import type { Viewport } from "../template/templateTypes";
@@ -11,6 +12,9 @@ import {
   selectEditScope,
   selectTemplateMetadata,
 } from "../store/selectors";
+import { executeCommand } from "../commands/commandExecutor";
+import { createUndoCommand } from "../commands/undoCommand";
+import { selectLatestUndoableCommandGroup } from "../history/historySelectors";
 import { ResetDialog } from "./ResetDialog";
 
 const viewportOptions: Array<{ value: Viewport; label: string }> = [
@@ -31,7 +35,33 @@ export function TopToolbar() {
   const template = useAppSelector(selectTemplateMetadata);
   const activeViewport = useAppSelector(selectActiveViewport);
   const editScope = useAppSelector(selectEditScope);
+  const latestUndoableCommand = useAppSelector(selectLatestUndoableCommandGroup);
+  const templateDocument = useAppSelector((state) => state.template);
   const [isResetOpen, setIsResetOpen] = useState(false);
+
+  const undoLatestCommand = () => {
+    if (!latestUndoableCommand) {
+      return;
+    }
+
+    const undoCommand = createUndoCommand(latestUndoableCommand, templateDocument, {
+      id: `undo-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (!undoCommand.ok) {
+      dispatch(setPersistenceNotice(`Undo failed: ${undoCommand.error.message}`));
+      return;
+    }
+
+    const result = dispatch(executeCommand(undoCommand.command));
+
+    dispatch(
+      setPersistenceNotice(
+        result.ok ? "Undid latest edit." : `Undo failed: ${result.error.message}`,
+      ),
+    );
+  };
 
   return (
     <header className="top-toolbar" aria-label="Editor toolbar">
@@ -71,6 +101,17 @@ export function TopToolbar() {
       </label>
 
       <div className="reset-area">
+        <button
+          type="button"
+          className="toolbar-button"
+          disabled={!latestUndoableCommand}
+          onClick={undoLatestCommand}
+        >
+          Undo
+        </button>
+        {!latestUndoableCommand ? (
+          <span className="toolbar-helper">Nothing to undo.</span>
+        ) : null}
         <button
           type="button"
           className="toolbar-button"

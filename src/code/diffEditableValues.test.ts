@@ -48,6 +48,51 @@ describe("validated code editing", () => {
     ).toBe("code");
   });
 
+  it("allows code edits for optional text background and padding fields", () => {
+    const store = createAppStore();
+    const backgroundCommand = createCodeEditCommand({
+      template: store.getState().template,
+      elementId: "hero-heading",
+      propertyScope: "style",
+      viewportScope: "all",
+      values: { background: "#ffeeaa" },
+    });
+
+    expect(backgroundCommand.ok).toBe(true);
+
+    if (!backgroundCommand.ok || !backgroundCommand.command) {
+      throw new Error("Expected text background code command");
+    }
+
+    expect(store.dispatch(executeCommand(backgroundCommand.command))).toMatchObject({
+      ok: true,
+    });
+
+    const paddingCommand = createCodeEditCommand({
+      template: store.getState().template,
+      elementId: "hero-heading",
+      propertyScope: "layout",
+      viewportScope: "all",
+      values: { padding: "8px 12px" },
+    });
+
+    expect(paddingCommand.ok).toBe(true);
+
+    if (!paddingCommand.ok || !paddingCommand.command) {
+      throw new Error("Expected text padding code command");
+    }
+
+    expect(store.dispatch(executeCommand(paddingCommand.command))).toMatchObject({
+      ok: true,
+    });
+    expect(store.getState().template.elements["hero-heading"].style.background).toBe(
+      "#ffeeaa",
+    );
+    expect(store.getState().template.elements["hero-heading"].layout.padding).toBe(
+      "8px 12px",
+    );
+  });
+
   it("rejects protected, unknown, and invalid code fields before dispatch", () => {
     const store = createAppStore();
     const template = store.getState().template;

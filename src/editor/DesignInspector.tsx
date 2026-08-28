@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { executeCommand } from "../commands/commandExecutor";
 import { getEditablePathsForElementType } from "../commands/editableFields";
 import { createManualPropertyCommand } from "../commands/manualCommandCreators";
 import type { JsonValue } from "../commands/commandTypes";
-import { selectEditScope, selectSelectedIds } from "../store/selectors";
+import {
+  selectActiveViewport,
+  selectEditScope,
+  selectSelectedIds,
+} from "../store/selectors";
 import { getScopedValueForCommand } from "../commands/commandExecutor";
+import { validateNewValue } from "../commands/valueValidation";
+import {
+  clearPreviewElements,
+  clearPreviewValue,
+  setPreviewValue,
+} from "../store/editorUISlice";
 import { selectTemplateDocument } from "../template/templateSelectors";
 import type { EditScope, TemplateElement } from "../template/templateTypes";
 import { StructureControls } from "./StructureControls";
@@ -33,6 +43,7 @@ const fieldDefinitions: FieldDefinition[] = [
   { path: "style.background", label: "Background", kind: "color" },
   { path: "style.borderColor", label: "Border color", kind: "color" },
   { path: "style.radius", label: "Border radius", kind: "text" },
+  { path: "style.shadow", label: "Shadow", kind: "text" },
   { path: "style.fontSize", label: "Font size", kind: "number" },
   {
     path: "style.fontWeight",
@@ -55,6 +66,8 @@ const fieldDefinitions: FieldDefinition[] = [
   { path: "layout.visible", label: "Visible", kind: "checkbox" },
   { path: "layout.width", label: "Width", kind: "number" },
   { path: "layout.height", label: "Height", kind: "number" },
+  { path: "layout.minWidth", label: "Minimum width", kind: "number" },
+  { path: "layout.minHeight", label: "Minimum height", kind: "number" },
   { path: "layout.offsetX", label: "X offset", kind: "number" },
   { path: "layout.offsetY", label: "Y offset", kind: "number" },
   { path: "layout.padding", label: "Padding", kind: "text" },
@@ -62,12 +75,25 @@ const fieldDefinitions: FieldDefinition[] = [
   { path: "layout.gap", label: "Gap", kind: "text" },
   { path: "layout.maxWidth", label: "Max width", kind: "text" },
   { path: "layout.columns", label: "Columns", kind: "number" },
+  {
+    path: "layout.align",
+    label: "Item alignment",
+    kind: "select",
+    options: ["start", "center", "end", "stretch"],
+  },
 ];
+
+interface RenderedSize {
+  elementId: string;
+  height: number;
+  width: number;
+}
 
 export function DesignInspector() {
   const dispatch = useAppDispatch();
   const template = useAppSelector(selectTemplateDocument);
   const selectedIds = useAppSelector(selectSelectedIds);
+  const activeViewport = useAppSelector(selectActiveViewport);
   const viewportScope = useAppSelector(selectEditScope);
   const selectedElements = useMemo(
     () =>
@@ -82,17 +108,148 @@ export function DesignInspector() {
   );
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [renderedSize, setRenderedSize] = useState<RenderedSize | null>(null);
+
+  useLayoutEffect(() => {
+    const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
+
+    if (!selectedElement) {
+      setRenderedSize(null);
+      return;
+    }
+
+    const findRenderedNode = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-element-id]")).find(
+        (node) => node.dataset.elementId === selectedElement.id,
+      );
+    const measure = () => {
+      const node = findRenderedNode();
+
+      if (!node) {
+        setRenderedSize(null);
+        return;
+      }
+
+      const rect = node.getBoundingClientRect();
+      const renderer = node.closest<HTMLElement>(".template-renderer");
+      const rendererRect = renderer?.getBoundingClientRect();
+      const rendererScale =
+        renderer && rendererRect && renderer.offsetWidth > 0
+          ? rendererRect.width / renderer.offsetWidth
+          : 1;
+      const scale = rendererScale > 0 ? rendererScale : 1;
+      const width = Math.round(rect.width / scale);
+      const height = Math.round(rect.height / scale);
+
+      if (width <= 0 || height <= 0) {
+        return;
+      }
+
+      setRenderedSize((current) =>
+        current?.elementId === selectedElement.id &&
+        current.width === width &&
+        current.height === height
+          ? current
+          : { elementId: selectedElement.id, width, height },
+      );
+    };
+
+    measure();
+    const node = findRenderedNode();
+    const resizeObserver =
+      node && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measure)
+        : null;
+
+    if (node && resizeObserver) {
+      resizeObserver.observe(node);
+    }
+
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [activeViewport, selectedElements]);
 
   useEffect(() => {
     setDrafts(createDrafts(template, selectedElements, editablePaths, viewportScope));
+    setFieldErrors({});
     setStatus(null);
-  }, [editablePaths, selectedElements, template, viewportScope]);
+    dispatch(clearPreviewElements());
+  }, [dispatch, editablePaths, selectedElements, template, viewportScope]);
+
+  useEffect(() => {
+    const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
+
+    if (!selectedElement || renderedSize?.elementId !== selectedElement.id) {
+      return;
+    }
+
+    setDrafts((current) => {
+      const nextDrafts = { ...current };
+      const dimensions = [
+        ["layout.width", renderedSize.width],
+        ["layout.height", renderedSize.height],
+      ] as const;
+
+      dimensions.forEach(([path, measuredValue]) => {
+        if (!editablePaths.includes(path) || current[path] !== "") {
+          return;
+        }
+
+        const fieldName = getFieldNameFromPath(path);
+        const scopedValue = getScopedValueForCommand(
+          selectedElement,
+          viewportScope,
+          "layout",
+          fieldName,
+        );
+
+        if (scopedValue === null) {
+          nextDrafts[path] = String(measuredValue);
+        }
+      });
+
+      return nextDrafts;
+    });
+  }, [editablePaths, renderedSize, selectedElements, viewportScope]);
 
   const applyField = (field: FieldDefinition) => {
-    const value = parseFieldValue(field, drafts[field.path]);
+    const parsedValue = parseFieldValue(field, drafts[field.path]);
     const scope = getScopeFromPath(field.path);
 
     if (!scope) {
+      return;
+    }
+
+    if (!parsedValue.ok) {
+      setFieldErrors((current) => ({
+        ...current,
+        [field.path]: parsedValue.error,
+      }));
+      setStatus(parsedValue.error);
+      return;
+    }
+
+    const fieldName = getFieldNameFromPath(field.path);
+    const valueError = validateNewValue(scope, fieldName, parsedValue.value);
+
+    if (valueError) {
+      setFieldErrors((current) => ({
+        ...current,
+        [field.path]: valueError.message,
+      }));
+      setStatus(valueError.message);
+      dispatch(
+        clearPreviewValue({
+          elementIds: selectedElements.map((element) => element.id),
+          scope,
+          fieldName,
+        }),
+      );
       return;
     }
 
@@ -102,7 +259,7 @@ export function DesignInspector() {
       propertyScope: scope,
       viewportScope,
       path: field.path,
-      newValue: value,
+      newValue: parsedValue.value,
       description: `Manual inspector edit ${field.path}`,
     });
 
@@ -113,7 +270,89 @@ export function DesignInspector() {
 
     const result = dispatch(executeCommand(command));
 
-    setStatus(result.ok ? "Change applied." : result.error.message);
+    if (result.ok) {
+      setFieldErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors[field.path];
+
+        return nextErrors;
+      });
+      dispatch(
+        clearPreviewValue({
+          elementIds: selectedElements.map((element) => element.id),
+          scope,
+          fieldName,
+        }),
+      );
+      setStatus("Change applied.");
+      return;
+    }
+
+    setFieldErrors((current) => ({
+      ...current,
+      [field.path]: result.error.message,
+    }));
+    setStatus(result.error.message);
+  };
+
+  const updateDraft = (field: FieldDefinition, draftValue: string) => {
+    setDrafts((current) => ({ ...current, [field.path]: draftValue }));
+
+    const scope = getScopeFromPath(field.path);
+
+    if (!scope) {
+      return;
+    }
+
+    const fieldName = getFieldNameFromPath(field.path);
+    const parsedValue = parseFieldValue(field, draftValue);
+
+    if (!parsedValue.ok) {
+      setFieldErrors((current) => ({
+        ...current,
+        [field.path]: parsedValue.error,
+      }));
+      dispatch(
+        clearPreviewValue({
+          elementIds: selectedElements.map((element) => element.id),
+          scope,
+          fieldName,
+        }),
+      );
+      return;
+    }
+
+    const valueError = validateNewValue(scope, fieldName, parsedValue.value);
+
+    if (valueError) {
+      setFieldErrors((current) => ({
+        ...current,
+        [field.path]: valueError.message,
+      }));
+      dispatch(
+        clearPreviewValue({
+          elementIds: selectedElements.map((element) => element.id),
+          scope,
+          fieldName,
+        }),
+      );
+      return;
+    }
+
+    setFieldErrors((current) => {
+      const nextErrors = { ...current };
+      delete nextErrors[field.path];
+
+      return nextErrors;
+    });
+    dispatch(
+      setPreviewValue({
+        elementIds: selectedElements.map((element) => element.id),
+        scope,
+        fieldName,
+        value: parsedValue.value,
+      }),
+    );
   };
 
   if (selectedElements.length === 0) {
@@ -141,6 +380,21 @@ export function DesignInspector() {
           ? `${selectedElements[0].name} (${selectedElements[0].id})`
           : `${selectedElements.length} selected${sameType ? "" : " across mixed types"}`}
       </p>
+      {renderedSize && selectedElements.length === 1 ? (
+        <div className="rendered-size-readout" aria-label="Rendered element size">
+          <span>Rendered size</span>
+          <strong>
+            {renderedSize.width} x {renderedSize.height} px
+          </strong>
+          <small>
+            Auto dimensions are measured from the canvas. Editing Width or Height
+            stores a fixed pixel value.
+          </small>
+        </div>
+      ) : null}
+      <p className="field-status">
+        Changes preview immediately. Blur, Enter, or Apply commits one safe edit.
+      </p>
       <ViewportImpactIndicator viewportScope={viewportScope} />
       {!sameType ? (
         <p className="field-status">
@@ -152,11 +406,10 @@ export function DesignInspector() {
           <InspectorField
             key={field.path}
             draft={drafts[field.path] ?? ""}
+            error={fieldErrors[field.path]}
             field={field}
             onApply={() => applyField(field)}
-            onChange={(value) =>
-              setDrafts((current) => ({ ...current, [field.path]: value }))
-            }
+            onChange={(value) => updateDraft(field, value)}
           />
         ))}
       </div>
@@ -172,6 +425,7 @@ export function DesignInspector() {
 
 interface InspectorFieldProps {
   draft: string;
+  error?: string;
   field: FieldDefinition;
   onApply: () => void;
   onChange: (value: string) => void;
@@ -179,6 +433,7 @@ interface InspectorFieldProps {
 
 function InspectorField({
   draft,
+  error,
   field,
   onApply,
   onChange,
@@ -189,11 +444,16 @@ function InspectorField({
     <div className="inspector-field">
       <label className="field-control" htmlFor={id}>
         <span>{field.label}</span>
-        {renderFieldInput(id, field, draft, onChange)}
+        {renderFieldInput(id, field, draft, onChange, onApply)}
       </label>
-      <button type="button" onClick={onApply}>
+      <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={onApply}>
         Apply
       </button>
+      {error ? (
+        <p className="field-error inspector-field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -203,7 +463,39 @@ function renderFieldInput(
   field: FieldDefinition,
   draft: string,
   onChange: (value: string) => void,
+  onCommit: () => void,
 ) {
+  if (field.kind === "color") {
+    const colorValue = normalizeColorDraft(draft);
+
+    return (
+      <span className="color-field">
+        <input
+          id={id}
+          aria-label={field.label}
+          type="color"
+          value={colorValue}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          onBlur={onCommit}
+        />
+        <input
+          aria-label={`${field.label} hex value`}
+          type="text"
+          value={draft}
+          onChange={(event) => onChange(event.currentTarget.value.trim())}
+          onBlur={onCommit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onCommit();
+            }
+          }}
+          placeholder="#000000"
+        />
+      </span>
+    );
+  }
+
   if (field.kind === "textarea") {
     return (
       <textarea
@@ -211,6 +503,13 @@ function renderFieldInput(
         rows={3}
         value={draft}
         onChange={(event) => onChange(event.currentTarget.value)}
+        onBlur={onCommit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            onCommit();
+          }
+        }}
       />
     );
   }
@@ -221,6 +520,12 @@ function renderFieldInput(
         id={id}
         value={field.options?.includes(draft) ? draft : ""}
         onChange={(event) => onChange(event.currentTarget.value)}
+        onBlur={onCommit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            onCommit();
+          }
+        }}
       >
         <option value="" disabled>
           Mixed
@@ -241,6 +546,7 @@ function renderFieldInput(
         checked={draft === "true"}
         type="checkbox"
         onChange={(event) => onChange(String(event.currentTarget.checked))}
+        onBlur={onCommit}
       />
     );
   }
@@ -248,9 +554,16 @@ function renderFieldInput(
   return (
     <input
       id={id}
-      type={field.kind === "number" ? "number" : field.kind}
+      type={field.kind === "number" ? "number" : "text"}
       value={draft}
       onChange={(event) => onChange(event.currentTarget.value)}
+      onBlur={onCommit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onCommit();
+        }
+      }}
     />
   );
 }
@@ -293,23 +606,115 @@ function stringifyMixedValue(path: string, values: JsonValue[]): string {
     return "true";
   }
 
+  if (isColorPath(path) && firstValue === null) {
+    return "#000000";
+  }
+
   if (firstValue === null) {
     return "";
   }
 
-  return String(firstValue);
+  const stringValue = String(firstValue);
+
+  return isColorPath(path) ? normalizeColorDraft(stringValue) : stringValue;
 }
 
-function parseFieldValue(field: FieldDefinition, value: string): JsonValue {
+function isColorPath(path: string): boolean {
+  return path === "style.color" ||
+    path === "style.background" ||
+    path === "style.borderColor";
+}
+
+function isHexColor(value: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
+function normalizeColorDraft(value: string): string {
+  const trimmedValue = value.trim();
+
+  if (isHexColor(trimmedValue)) {
+    return trimmedValue.toLowerCase();
+  }
+
+  const shortHexMatch = /^#([0-9a-fA-F]{3})$/.exec(trimmedValue);
+
+  if (shortHexMatch) {
+    return `#${shortHexMatch[1]
+      .split("")
+      .map((character) => `${character}${character}`)
+      .join("")
+      .toLowerCase()}`;
+  }
+
+  const rgbMatch = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i.exec(
+    trimmedValue,
+  );
+
+  if (rgbMatch) {
+    return `#${rgbChannelToHex(rgbMatch[1])}${rgbChannelToHex(rgbMatch[2])}${rgbChannelToHex(rgbMatch[3])}`;
+  }
+
+  return "#000000";
+}
+
+function rgbChannelToHex(value: string): string {
+  return Math.max(0, Math.min(255, Number(value)))
+    .toString(16)
+    .padStart(2, "0");
+}
+
+type InspectorFieldValue = string | number | boolean | null;
+
+type ParsedFieldValue =
+  | { ok: true; value: InspectorFieldValue }
+  | { ok: false; error: string };
+
+function parseFieldValue(field: FieldDefinition, value: string): ParsedFieldValue {
   if (field.kind === "number") {
-    return Number(value);
+    if (value.trim() === "") {
+      return { ok: false, error: `${field.label} needs a number.` };
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue)
+      ? { ok: true, value: numberValue }
+      : { ok: false, error: `${field.label} needs a valid number.` };
   }
 
   if (field.kind === "checkbox") {
-    return value === "true";
+    return { ok: true, value: value === "true" };
   }
 
-  return value;
+  if (field.path === "style.fontWeight") {
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue)
+      ? { ok: true, value: numberValue }
+      : { ok: false, error: `${field.label} needs a valid number.` };
+  }
+
+  if (isCssDimensionPath(field.path)) {
+    return { ok: true, value: normalizeCssDimension(value) };
+  }
+
+  return { ok: true, value };
+}
+
+function isCssDimensionPath(path: string): boolean {
+  return path === "style.radius" ||
+    path === "layout.gap" ||
+    path === "layout.margin" ||
+    path === "layout.maxWidth" ||
+    path === "layout.padding";
+}
+
+function normalizeCssDimension(value: string): string {
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((part) => (/^\d+(?:\.\d+)?$/.test(part) && part !== "0" ? `${part}px` : part))
+    .join(" ");
 }
 
 function getScopeFromPath(path: string): EditScope | null {
@@ -320,6 +725,10 @@ function getScopeFromPath(path: string): EditScope | null {
   }
 
   return null;
+}
+
+function getFieldNameFromPath(path: string): string {
+  return path.split(".")[1] ?? "";
 }
 
 function getCommonEditablePaths(selectedElements: TemplateElement[]): string[] {

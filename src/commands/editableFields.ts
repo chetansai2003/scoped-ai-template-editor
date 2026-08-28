@@ -2,7 +2,14 @@ import type { EditScope, TemplateElementType } from "../template/templateTypes";
 
 type EditableFieldRegistry = Record<TemplateElementType, ReadonlySet<string>>;
 
-const commonStyleFields = [
+const boxStyleFields = [
+  "style.background",
+  "style.borderColor",
+  "style.radius",
+  "style.shadow",
+] as const;
+
+const textStyleFields = [
   "style.background",
   "style.borderColor",
   "style.color",
@@ -11,7 +18,6 @@ const commonStyleFields = [
   "style.radius",
   "style.shadow",
   "style.textAlign",
-  "style.tone",
 ] as const;
 
 const commonLayoutFields = [
@@ -32,15 +38,14 @@ const commonLayoutFields = [
 ] as const;
 
 export const editableFieldRegistry: EditableFieldRegistry = {
-  page: new Set([...commonStyleFields, "layout.variant"]),
-  section: new Set([...commonStyleFields, ...commonLayoutFields]),
-  container: new Set(["style.background", ...commonLayoutFields]),
-  stack: new Set(["style.background", ...commonLayoutFields]),
+  page: new Set(["style.background", "layout.variant"]),
+  section: new Set([...boxStyleFields, ...commonLayoutFields]),
+  container: new Set([...boxStyleFields, ...commonLayoutFields]),
+  stack: new Set([...boxStyleFields, ...commonLayoutFields]),
   text: new Set([
     "content.text",
     "content.role",
-    "style.color",
-    "style.textAlign",
+    ...textStyleFields,
     ...commonLayoutFields,
   ]),
   button: new Set([
@@ -49,20 +54,29 @@ export const editableFieldRegistry: EditableFieldRegistry = {
     "style.background",
     "style.borderColor",
     "style.color",
+    "style.fontSize",
+    "style.fontWeight",
     "style.radius",
     "style.shadow",
-    "style.tone",
-    "layout.padding",
-    "layout.variant",
-    "layout.visible",
-    "layout.width",
-    "layout.height",
+    "style.textAlign",
+    ...commonLayoutFields,
   ]),
-  image: new Set(["content.alt", "content.src", ...commonStyleFields, ...commonLayoutFields]),
-  card: new Set([...commonStyleFields, ...commonLayoutFields]),
-  badge: new Set(["content.text", ...commonStyleFields, "layout.variant"]),
-  stat: new Set(["content.text", "content.label", ...commonStyleFields, ...commonLayoutFields]),
-  nav: new Set(["content.text", ...commonStyleFields, "layout.padding", "layout.variant"]),
+  image: new Set(["content.alt", "content.src", ...boxStyleFields, ...commonLayoutFields]),
+  card: new Set([...boxStyleFields, "style.color", ...commonLayoutFields]),
+  badge: new Set(["content.text", ...textStyleFields, ...commonLayoutFields]),
+  stat: new Set(["content.text", "content.label", ...textStyleFields, ...commonLayoutFields]),
+  nav: new Set([
+    "content.text",
+    "style.background",
+    "style.borderColor",
+    "style.color",
+    "style.fontSize",
+    "style.fontWeight",
+    "style.radius",
+    "style.shadow",
+    "style.textAlign",
+    ...commonLayoutFields,
+  ]),
 };
 
 const protectedPathPrefixes = [

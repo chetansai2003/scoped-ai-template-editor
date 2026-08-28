@@ -4,8 +4,12 @@
 }
 
 .rendered-element {
+  box-sizing: border-box;
   position: relative;
   background: var(--element-background, transparent);
+  border: 1px solid var(--element-border-color, transparent);
+  border-radius: var(--element-radius, 0);
+  box-shadow: var(--element-shadow, none);
   color: var(--element-color, inherit);
   font-size: var(--element-font-size, inherit);
   font-weight: var(--element-font-weight, inherit);
@@ -14,6 +18,7 @@
   width: var(--element-width, auto);
   height: var(--element-height, auto);
   margin: var(--element-margin, 0);
+  padding: var(--element-padding, 0);
   text-align: var(--element-text-align, inherit);
   transform: translate(var(--element-offset-x, 0), var(--element-offset-y, 0));
 }
@@ -57,6 +62,8 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  width: var(--element-width, 100%);
+  min-height: var(--element-min-height, var(--element-height, initial));
   padding: var(--element-padding, 18px 40px);
   border-bottom: 1px solid var(--element-border-color, #ded6c9);
   backdrop-filter: blur(12px);
@@ -64,12 +71,13 @@
 
 .rendered-nav strong {
   margin-right: auto;
-  font-size: 1rem;
+  color: inherit;
+  font-size: inherit;
 }
 
 .rendered-nav span {
-  color: #53606b;
-  font-size: 0.84rem;
+  color: inherit;
+  font-size: inherit;
   font-weight: 700;
 }
 
@@ -78,10 +86,10 @@
   grid-template-columns: repeat(var(--element-columns, 1), minmax(0, 1fr));
   gap: var(--element-gap, 20px);
   align-items: var(--element-align, stretch);
-  width: 100%;
+  width: var(--element-width, 100%);
   max-width: var(--element-max-width, none);
   padding: var(--element-padding, 48px 40px);
-  margin: 0 auto;
+  margin: var(--element-margin, 0 auto);
 }
 
 .rendered-stack,
@@ -98,7 +106,6 @@
 
 .rendered-card,
 .rendered-stat {
-  border: 1px solid var(--element-border-color, transparent);
   border-radius: var(--element-radius, 18px);
   box-shadow: var(--element-shadow, none);
 }
@@ -111,9 +118,10 @@
 
 .rendered-badge {
   display: inline-flex;
-  width: max-content;
-  padding: 7px 11px;
-  border-radius: 999px;
+  width: var(--element-width, max-content);
+  min-height: var(--element-min-height, var(--element-height, initial));
+  padding: var(--element-padding, 7px 11px);
+  border-radius: var(--element-radius, 999px);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -127,11 +135,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: max-content;
-  min-height: 42px;
-  padding: 0 16px;
-  border: 1px solid var(--element-border-color, transparent);
-  border-radius: 8px;
+  width: var(--element-width, max-content);
+  min-height: var(--element-min-height, var(--element-height, 42px));
+  padding: var(--element-padding, 0 16px);
+  border-radius: var(--element-radius, 8px);
   box-shadow: var(--element-shadow, none);
   font-weight: 800;
   text-decoration: none;
@@ -141,7 +148,8 @@
 .rendered-image [role="img"] {
   display: block;
   width: 100%;
-  min-height: 220px;
+  height: 100%;
+  min-height: var(--element-min-height, var(--element-height, 220px));
   border-radius: var(--element-radius, 18px);
   background:
     linear-gradient(135deg, rgba(31, 95, 85, 0.22), rgba(240, 195, 107, 0.32)),
@@ -152,9 +160,9 @@
 .rendered-stat {
   display: grid;
   gap: 4px;
-  min-height: 96px;
-  padding: 20px;
-  background: #ffffff;
+  min-height: var(--element-min-height, var(--element-height, 96px));
+  padding: var(--element-padding, 20px);
+  background: var(--element-background, #ffffff);
 }
 
 .rendered-stat strong {
@@ -163,7 +171,7 @@
 }
 
 .rendered-stat span {
-  color: #65717c;
+  color: inherit;
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -178,18 +186,18 @@
 
 .rendered-variant-hero-heading {
   max-width: 740px;
-  font-size: clamp(2.4rem, 5vw, 4.8rem);
+  font-size: var(--element-font-size, clamp(2.4rem, 5vw, 4.8rem));
   line-height: 0.98;
 }
 
 .rendered-variant-hero-heading-compact {
-  font-size: 2.65rem;
+  font-size: var(--element-font-size, 2.65rem);
   line-height: 1.02;
 }
 
 .rendered-variant-lead {
   max-width: 620px;
-  font-size: 1.08rem;
+  font-size: var(--element-font-size, 1.08rem);
   line-height: 1.65;
 }
 
@@ -204,11 +212,11 @@
 }
 
 .rendered-variant-actions-stacked .rendered-button {
-  width: 100%;
+  width: var(--element-width, 100%);
 }
 
 .rendered-variant-hero-visual {
-  min-height: 360px;
+  min-height: var(--element-min-height, var(--element-height, 360px));
   align-content: end;
 }
 
@@ -227,7 +235,7 @@
 .rendered-variant-section-heading {
   grid-column: 1 / -1;
   max-width: 650px;
-  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-size: var(--element-font-size, clamp(2rem, 4vw, 3.2rem));
 }
 
 .rendered-variant-cta {

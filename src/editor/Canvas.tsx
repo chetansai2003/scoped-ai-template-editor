@@ -63,17 +63,34 @@ export function Canvas() {
   };
 
   const commitLayout = (elementId: ElementId, layout: Partial<ElementLayout>) => {
+    const changes = [
+      "width" in layout
+        ? { path: "layout.width", newValue: layout.width ?? null }
+        : null,
+      "height" in layout
+        ? { path: "layout.height", newValue: layout.height ?? null }
+        : null,
+      "offsetX" in layout
+        ? { path: "layout.offsetX", newValue: layout.offsetX ?? 0 }
+        : null,
+      "offsetY" in layout
+        ? { path: "layout.offsetY", newValue: layout.offsetY ?? 0 }
+        : null,
+    ].filter((change): change is { path: string; newValue: number | null } =>
+      Boolean(change),
+    );
+
+    if (changes.length === 0) {
+      setLayoutError(null);
+      return;
+    }
+
     const command = createManualMultiPropertyCommand({
       template,
       elementId,
       propertyScope: "layout",
       viewportScope: editScope,
-      changes: [
-        { path: "layout.width", newValue: layout.width ?? null },
-        { path: "layout.height", newValue: layout.height ?? null },
-        { path: "layout.offsetX", newValue: layout.offsetX ?? 0 },
-        { path: "layout.offsetY", newValue: layout.offsetY ?? 0 },
-      ],
+      changes,
       description: `Resize and position ${elementId}`,
     });
 

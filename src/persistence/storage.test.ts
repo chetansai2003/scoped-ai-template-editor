@@ -17,7 +17,7 @@ describe("Persistence Storage", () => {
   const validState: PersistedEditorState = {
     schemaVersion: PERSISTENCE_SCHEMA_VERSION,
     template: structuredClone(northstarTemplate),
-    history: { byElement: {} },
+    history: { byElement: {}, undoneCommandIds: [] },
   };
 
   describe("loadPersistedState", () => {

@@ -332,6 +332,142 @@ describe("EditorShell", () => {
     expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
   });
 
+  it("previews inspector edits before committing on blur", () => {
+    const { store } = renderEditor();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const colorInput = screen.getByLabelText("Text color hex value");
+    fireEvent.change(colorInput, { target: { value: "#224466" } });
+
+    const renderedHeading = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-heading"]',
+    );
+
+    expect(renderedHeading?.style.getPropertyValue("--element-color")).toBe(
+      "#224466",
+    );
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#152028",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+
+    fireEvent.blur(colorInput);
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#224466",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+  });
+
+  it("shows field errors for invalid inspector values without committing", () => {
+    const { store } = renderEditor();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const radiusInput = screen.getByLabelText("Border radius");
+    fireEvent.change(radiusInput, { target: { value: "not-a-radius" } });
+    fireEvent.blur(radiusInput);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Radius must be a safe CSS dimension.",
+    );
+    expect(store.getState().template.elements["hero-heading"].style.radius).toBeUndefined();
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+  });
+
+  it("applies inspector radius, padding, and alignment only to the selected element", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const radiusInput = screen.getByLabelText("Border radius");
+    fireEvent.change(radiusInput, { target: { value: "18px" } });
+    const radiusField = radiusInput.closest(".inspector-field");
+    expect(radiusField).not.toBeNull();
+    await user.click(
+      within(radiusField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    const paddingInput = screen.getByLabelText("Padding");
+    fireEvent.change(paddingInput, { target: { value: "8px 12px" } });
+    const paddingField = paddingInput.closest(".inspector-field");
+    expect(paddingField).not.toBeNull();
+    await user.click(
+      within(paddingField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    await user.selectOptions(screen.getByLabelText("Text alignment"), "center");
+    const alignmentField = screen.getByLabelText("Text alignment").closest(".inspector-field");
+    expect(alignmentField).not.toBeNull();
+    await user.click(
+      within(alignmentField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    const heading = store.getState().template.elements["hero-heading"];
+    const body = store.getState().template.elements["hero-body"];
+    const renderedHeading = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-heading"]',
+    );
+
+    expect(heading.style.radius).toBe("18px");
+    expect(heading.layout.padding).toBe("8px 12px");
+    expect(heading.style.textAlign).toBe("center");
+    expect(body.style.textAlign).toBeUndefined();
+    expect(renderedHeading?.style.getPropertyValue("--element-radius")).toBe("18px");
+    expect(renderedHeading?.style.getPropertyValue("--element-padding")).toBe(
+      "8px 12px",
+    );
+  });
+
+  it("does not show inherited text alignment controls for section selections", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Hero, hero-section" }));
+
+    expect(screen.queryByLabelText("Text alignment")).not.toBeInTheDocument();
+  });
+
+  it("applies nav colors through the inspector", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Top Nav, top-nav" }));
+
+    const backgroundHex = screen.getByLabelText("Background hex value");
+    fireEvent.change(backgroundHex, { target: { value: "#223344" } });
+    const backgroundField = backgroundHex.closest(".inspector-field");
+    expect(backgroundField).not.toBeNull();
+    await user.click(
+      within(backgroundField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    const colorHex = screen.getByLabelText("Text color hex value");
+    fireEvent.change(colorHex, { target: { value: "#ffeeaa" } });
+    const colorField = colorHex.closest(".inspector-field");
+    expect(colorField).not.toBeNull();
+    await user.click(
+      within(colorField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    const nav = document.querySelector<HTMLElement>('[data-element-id="top-nav"]');
+
+    expect(store.getState().template.elements["top-nav"].style.background).toBe(
+      "#223344",
+    );
+    expect(store.getState().template.elements["top-nav"].style.color).toBe("#ffeeaa");
+    expect(nav?.style.getPropertyValue("--element-background")).toBe("#223344");
+    expect(nav?.style.getPropertyValue("--element-color")).toBe("#ffeeaa");
+  });
+
   it("shows viewport impact and commits mobile-only visibility as an override", async () => {
     const user = userEvent.setup();
     const { store } = renderEditor();
@@ -384,5 +520,92 @@ describe("EditorShell", () => {
 
     expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
     expect(store.getState().template.elements["hero-visual-card"].layout.width).toBeGreaterThan(160);
+    expect(
+      store.getState().template.elements["hero-visual-card"].layout.offsetX,
+    ).toBeUndefined();
+  });
+
+  it("keeps canvas movement local until pointer release creates one offset history entry", () => {
+    const { store } = renderEditor();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+
+    const moveHandle = screen.getByRole("button", {
+      name: "Move hero-visual-card",
+    });
+    fireEvent.pointerDown(moveHandle, { clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(screen.getByLabelText("Selection overlay"), {
+      clientX: 70,
+      clientY: 40,
+    });
+
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+
+    fireEvent.pointerUp(screen.getByLabelText("Selection overlay"), {
+      clientX: 70,
+      clientY: 40,
+    });
+
+    const movedLayout = store.getState().template.elements["hero-visual-card"].layout;
+
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(1);
+    expect(movedLayout.offsetX).toBeGreaterThan(0);
+    expect(movedLayout.offsetY).toBeGreaterThan(0);
+    expect(movedLayout.width).toBeUndefined();
+  });
+
+  it("does not start canvas movement from the normal selection outline", () => {
+    const { store } = renderEditor();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+
+    const selectionBox = screen.getByRole("group", {
+      name: "Move or resize hero-visual-card",
+    });
+    fireEvent.pointerDown(selectionBox, { clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(screen.getByLabelText("Selection overlay"), {
+      clientX: 70,
+      clientY: 40,
+    });
+    fireEvent.pointerUp(screen.getByLabelText("Selection overlay"), {
+      clientX: 70,
+      clientY: 40,
+    });
+
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+    expect(
+      store.getState().template.elements["hero-visual-card"].layout.offsetX,
+    ).toBeUndefined();
+  });
+
+  it("undoes the latest design edit from the toolbar", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const colorInput = screen.getByLabelText("Text color hex value");
+    fireEvent.change(colorInput, { target: { value: "#224466" } });
+    fireEvent.blur(colorInput);
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#224466",
+    );
+    expect(screen.getByRole("button", { name: "Undo" })).not.toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#152028",
+    );
+    expect(store.getState().history.undoneCommandIds).toHaveLength(1);
   });
 });

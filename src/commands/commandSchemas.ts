@@ -42,6 +42,7 @@ export const editCommandSchema = z
     source: z.enum(["canvas", "code", "ai", "restore"]),
     propertyScope: z.enum(["content", "style", "layout"]),
     viewportScope: z.enum(["all", "desktop", "tablet", "mobile"]),
+    undoOfCommandId: z.string().min(1).optional(),
     selectedIdsSnapshot: z.array(z.string().min(1)).optional(),
     targets: z.array(targetEditSchema).min(1),
     description: z.string().min(1).max(240),
@@ -111,6 +112,7 @@ export const structureCommandSchema = z
     id: z.string().min(1),
     source: z.enum(["canvas", "code", "ai", "restore"]),
     viewportScope: z.enum(["all", "desktop", "tablet", "mobile"]),
+    undoOfCommandId: z.string().min(1).optional(),
     selectedIdsSnapshot: z.array(z.string().min(1)).optional(),
     revisionTokens: z.record(z.string(), revisionTokenSchema),
     operation: structureOperationSchema,
@@ -179,5 +181,6 @@ export const validatedCommitPayloadSchema = z
     timestamp: z.string().datetime({ offset: true }),
     targets: z.array(validatedTargetCommitSchema).min(1),
     removedElementIds: z.array(z.string().min(1)).optional(),
+    undoOfCommandId: z.string().min(1).optional(),
   })
   .strict();

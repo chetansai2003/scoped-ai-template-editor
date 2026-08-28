@@ -2,6 +2,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react"
 import { resolveTemplateElement } from "../template/resolveResponsiveValue";
 import type {
   ElementId,
+  ElementContent,
   ElementLayout,
   ElementStyle,
   ResolvedTemplateElement,
@@ -14,6 +15,16 @@ interface RenderedElementProps {
   draftLayouts?: Partial<Record<ElementId, Partial<ElementLayout>>>;
   onElementKeySelect?: (elementId: ElementId, append: boolean) => void;
   onElementSelect?: (elementId: ElementId, append: boolean) => void;
+  previewElements?: Partial<
+    Record<
+      ElementId,
+      Partial<{
+        content: Partial<ElementContent>;
+        style: Partial<ElementStyle>;
+        layout: Partial<ElementLayout>;
+      }>
+    >
+  >;
   selectedIds: ElementId[];
   template: TemplateDocument;
   viewport: Viewport;
@@ -26,6 +37,7 @@ export function RenderedElement({
   draftLayouts,
   onElementKeySelect,
   onElementSelect,
+  previewElements,
   selectedIds,
   template,
   viewport,
@@ -37,8 +49,18 @@ export function RenderedElement({
   }
 
   const resolvedElement = resolveTemplateElement(element, viewport);
+  const preview = previewElements?.[elementId];
+  const resolvedContent = {
+    ...resolvedElement.resolvedContent,
+    ...preview?.content,
+  };
+  const resolvedStyle = {
+    ...resolvedElement.resolvedStyle,
+    ...preview?.style,
+  };
   const resolvedLayout = {
     ...resolvedElement.resolvedLayout,
+    ...preview?.layout,
     ...draftLayouts?.[elementId],
   };
 
@@ -48,6 +70,8 @@ export function RenderedElement({
 
   const renderedElement = {
     ...resolvedElement,
+    resolvedContent,
+    resolvedStyle,
     resolvedLayout,
   };
   const children = element.children.map((childId) => (
@@ -57,6 +81,7 @@ export function RenderedElement({
       draftLayouts={draftLayouts}
       onElementKeySelect={onElementKeySelect}
       onElementSelect={onElementSelect}
+      previewElements={previewElements}
       selectedIds={selectedIds}
       template={template}
       viewport={viewport}

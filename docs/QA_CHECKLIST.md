@@ -4,7 +4,7 @@
 
 - [x] `npm run typecheck` passed.
 - [x] `npm run lint` passed.
-- [x] `npm run test:run` passed: 78 Vitest tests.
+- [x] `npm run test:run` passed: 90 Vitest tests.
 - [x] `npx playwright test` passed: 3 Chromium reviewer-journey tests.
 - [x] `npm run build` passed with a non-blocking Vite chunk-size warning.
 
@@ -14,6 +14,9 @@
 - [x] Reset dialog cancel preserves edits.
 - [x] Confirm Reset removes edits and restored defaults survive reload.
 - [x] History panel can restore an older committed state.
+- [x] Design panel previews edits live and commits through validation.
+- [x] Global Undo reverses the latest committed command through validation.
+- [x] Canvas drag/resize preview during pointer movement and commit once on release.
 - [ ] At about 1280px width, toolbar, sidebars, canvas, and drawer avoid horizontal overflow.
 - [ ] Desktop, Tablet, and Mobile preview controls resize the canvas frame cleanly.
 - [ ] Canvas selection overlay is visible and not color-only.

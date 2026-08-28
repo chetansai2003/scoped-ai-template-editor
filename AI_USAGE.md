@@ -6,7 +6,7 @@ OpenAI Codex.
 
 ## Task
 
-Step 7 submission readiness for the Scoped AI Template Editor: audit the current Step 1-6 app, fix readiness blockers, update documentation, create reviewer evidence, run verification, and avoid adding new product features.
+Step 7 submission readiness for the Scoped AI Template Editor, followed by a manual-editing usability fix: live-preview Design controls, reliable canvas drag/resize behavior, and global Undo through the validated command pipeline.
 
 ## Prompt Summary
 
@@ -32,7 +32,7 @@ The user requested Step 7 only: documentation, deployment readiness, reviewer de
 
 - Typecheck passed.
 - Lint passed after removing explicit `any` usage and ignoring generated Playwright output folders.
-- Vitest passed: 78 tests.
+- Vitest passed: 90 tests after the manual-editing usability fixes.
 - Playwright passed: 3 Chromium tests after installing the local Playwright Chromium browser.
 - Production build passed. Vite reported a chunk-size warning, treated as non-blocking because no reviewer-visible performance issue was found in the tested flows.
 
