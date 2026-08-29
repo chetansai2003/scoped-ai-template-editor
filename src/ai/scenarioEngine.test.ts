@@ -55,6 +55,50 @@ describe("deterministic AI proposals", () => {
     expect(batch.items.every((item) => item.elementId === "hero-heading")).toBe(true);
   });
 
+  it("understands common dark-blue text color wording", () => {
+    const store = createAppStore();
+    const batch = generateProposals({
+      instruction: "make text color dark blue",
+      selectedIds: ["hero-body"],
+      viewportScope: "all",
+      template: store.getState().template,
+    });
+
+    expect(batch.message).toBeUndefined();
+    expect(batch.items).toHaveLength(1);
+    expect(batch.items[0]).toMatchObject({
+      elementId: "hero-body",
+      propertyScope: "style",
+      status: "pending",
+    });
+    expect(batch.items[0].changes[0]).toMatchObject({
+      path: "style.color",
+      newValue: "#0f2a44",
+    });
+  });
+
+  it("understands common yellow background wording", () => {
+    const store = createAppStore();
+    const batch = generateProposals({
+      instruction: "make the background color yellow color",
+      selectedIds: ["hero-primary-cta"],
+      viewportScope: "all",
+      template: store.getState().template,
+    });
+
+    expect(batch.message).toBeUndefined();
+    expect(batch.items).toHaveLength(1);
+    expect(batch.items[0]).toMatchObject({
+      elementId: "hero-primary-cta",
+      propertyScope: "style",
+      status: "pending",
+    });
+    expect(batch.items[0].changes[0]).toMatchObject({
+      path: "style.background",
+      newValue: "#facc15",
+    });
+  });
+
   it("rejects vertical stack proposals for all-views scope", () => {
     const store = createAppStore();
     const batch = generateProposals({

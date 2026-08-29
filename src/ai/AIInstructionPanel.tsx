@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { buildProposalAcceptanceCommand } from "./proposalCommands";
 import { generateProposals } from "./scenarioEngine";
-import { storeProposalBatch } from "../store/proposalSlice";
-import { selectEditScope, selectSelectedIds } from "../store/selectors";
+import { executeCommand } from "../commands/commandExecutor";
+import {
+  markProposalItemStatus,
+  storeProposalBatch,
+} from "../store/proposalSlice";
+import {
+  selectEditScope,
+  selectProposalBoundary,
+  selectSelectedIds,
+} from "../store/selectors";
 import { selectTemplateDocument } from "../template/templateSelectors";
+import type { ProposalItem } from "./types";
 
 const examples = [
   "Make this text more concise",
@@ -19,8 +29,12 @@ export function AIInstructionPanel() {
   const selectedIds = useAppSelector(selectSelectedIds);
   const viewportScope = useAppSelector(selectEditScope);
   const template = useAppSelector(selectTemplateDocument);
+  const proposalState = useAppSelector(selectProposalBoundary);
   const [instruction, setInstruction] = useState(examples[0]);
   const [message, setMessage] = useState<string | null>(null);
+  const activeBatch = proposalState.activeBatchId
+    ? proposalState.batches[proposalState.activeBatchId]
+    : undefined;
 
   const generate = () => {
     if (selectedIds.length === 0) {
@@ -38,8 +52,63 @@ export function AIInstructionPanel() {
     dispatch(storeProposalBatch(batch));
     setMessage(
       batch.message ??
-        `${batch.items.length} proposal item${batch.items.length === 1 ? "" : "s"} generated.`,
+        `${batch.items.length} proposal item${batch.items.length === 1 ? "" : "s"} generated. Review and accept below to apply.`,
     );
+  };
+  const acceptItem = (item: ProposalItem) => {
+    if (!activeBatch || item.status !== "pending") {
+      return;
+    }
+
+    const commandResult = buildProposalAcceptanceCommand(
+      activeBatch,
+      item,
+      template,
+      selectedIds,
+    );
+
+    if (!commandResult.ok) {
+      dispatch(
+        markProposalItemStatus({
+          batchId: activeBatch.id,
+          itemId: item.id,
+          status: commandResult.status,
+          error: commandResult.error,
+        }),
+      );
+      setMessage(commandResult.error);
+      return;
+    }
+
+    const executionResult = dispatch(executeCommand(commandResult.command));
+
+    dispatch(
+      markProposalItemStatus({
+        batchId: activeBatch.id,
+        itemId: item.id,
+        status: executionResult.ok
+          ? "accepted"
+          : executionResult.error.code === "STALE_REVISION"
+            ? "stale"
+            : "invalid",
+        error: executionResult.ok ? undefined : executionResult.error.message,
+      }),
+    );
+    setMessage(executionResult.ok ? "Proposal accepted and applied." : executionResult.error.message);
+  };
+  const rejectItem = (item: ProposalItem) => {
+    if (!activeBatch || item.status !== "pending") {
+      return;
+    }
+
+    dispatch(
+      markProposalItemStatus({
+        batchId: activeBatch.id,
+        itemId: item.id,
+        status: "rejected",
+      }),
+    );
+    setMessage("Proposal rejected.");
   };
 
   return (
@@ -91,6 +160,64 @@ export function AIInstructionPanel() {
           {message}
         </p>
       ) : null}
+      {activeBatch ? (
+        <section className="inline-proposal-review" aria-label="Generated proposals">
+          <h3>Review proposal</h3>
+          {activeBatch.items.length === 0 ? (
+            <p className="field-status">No proposal items were generated.</p>
+          ) : (
+            activeBatch.items.map((item) => {
+              const element = template.elements[item.elementId];
+
+              return (
+                <article key={item.id} className="proposal-item">
+                  <div>
+                    <strong>{element?.name ?? item.elementId}</strong>
+                    <code>{item.elementId}</code>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{item.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Fields</dt>
+                      <dd>
+                        {item.kind === "structure"
+                          ? item.structureOperation?.type
+                          : item.changes.map((change) => change.path).join(", ")}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="proposal-diff">
+                    <span>Before: {formatProposalValue(item.before)}</span>
+                    <span>After: {formatProposalValue(item.after)}</span>
+                  </div>
+                  {item.error ? (
+                    <p className="field-error" role="status">
+                      {item.error}
+                    </p>
+                  ) : null}
+                  {item.status === "pending" ? (
+                    <div className="proposal-buttons">
+                      <button type="button" onClick={() => acceptItem(item)}>
+                        Accept proposal
+                      </button>
+                      <button type="button" onClick={() => rejectItem(item)}>
+                        Reject proposal
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })
+          )}
+        </section>
+      ) : null}
     </div>
   );
+}
+
+function formatProposalValue(value: ProposalItem["before"]): string {
+  return typeof value === "string" ? value : JSON.stringify(value);
 }

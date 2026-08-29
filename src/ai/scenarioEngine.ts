@@ -24,9 +24,29 @@ type ScenarioBuilder = (
   input: NormalizedProposalInput,
 ) => Omit<ProposalBatch, "id" | "normalizedInstruction">;
 
+interface ColorIntent {
+  name: string;
+  pathKind: "auto" | "background" | "text";
+  value: string;
+}
+
 interface NormalizedProposalInput extends GenerateProposalInput {
+  colorIntent?: ColorIntent;
   normalizedInstruction: string;
 }
+
+const colorValues: Record<string, string> = {
+  black: "#000000",
+  blue: "#2563eb",
+  "dark blue": "#0f2a44",
+  green: "#16a34a",
+  orange: "#f97316",
+  pink: "#ec4899",
+  purple: "#7c3aed",
+  red: "#dc2626",
+  white: "#ffffff",
+  yellow: "#facc15",
+};
 
 const aliases: Record<string, string> = {
   "make selected text concise": "make this text more concise",
@@ -49,8 +69,15 @@ const scenarios: Record<string, ScenarioBuilder> = {
 
 export function generateProposals(input: GenerateProposalInput): ProposalBatch {
   const normalizedInstruction = normalizeInstruction(input.instruction);
-  const canonicalInstruction = aliases[normalizedInstruction] ?? normalizedInstruction;
-  const builder = scenarios[canonicalInstruction] ?? buildUnknownScenario;
+  const colorIntent = inferColorIntent(normalizedInstruction);
+  const canonicalInstruction =
+    aliases[normalizedInstruction] ??
+    (colorIntent
+      ? `make ${colorIntent.pathKind} ${colorIntent.name}`
+      : inferCanonicalInstruction(normalizedInstruction));
+  const builder = colorIntent
+    ? buildColorScenario
+    : scenarios[canonicalInstruction] ?? buildUnknownScenario;
   const batchSeed = JSON.stringify({
     instruction: canonicalInstruction,
     selectedIds: input.selectedIds,
@@ -59,6 +86,7 @@ export function generateProposals(input: GenerateProposalInput): ProposalBatch {
   });
   const batchCore = builder({
     ...input,
+    colorIntent: colorIntent ?? undefined,
     normalizedInstruction: canonicalInstruction,
   });
   const batch: ProposalBatch = {
@@ -128,9 +156,7 @@ function buildDarkBlueScenario(
       return invalidItem(input, elementId, "style", "Selected element is missing.");
     }
 
-    const path = isEditablePath(element.type, "style.background")
-      ? "style.background"
-      : "style.color";
+    const path = chooseDarkBluePath(input.normalizedInstruction, element);
 
     if (!isEditablePath(element.type, path)) {
       return invalidItem(input, elementId, "style", "Selected element cannot receive dark blue styling.");
@@ -150,6 +176,88 @@ function buildDarkBlueScenario(
   });
 
   return batchBase(input, items);
+}
+
+function chooseDarkBluePath(
+  normalizedInstruction: string,
+  element: TemplateElement,
+): "style.background" | "style.color" {
+  const asksForTextColor =
+    normalizedInstruction.includes("text") ||
+    normalizedInstruction.includes("font") ||
+    normalizedInstruction.includes("color");
+
+  if (
+    (asksForTextColor || element.type === "text") &&
+    isEditablePath(element.type, "style.color")
+  ) {
+    return "style.color";
+  }
+
+  return isEditablePath(element.type, "style.background")
+    ? "style.background"
+    : "style.color";
+}
+
+function buildColorScenario(
+  input: NormalizedProposalInput,
+): Omit<ProposalBatch, "id" | "normalizedInstruction"> {
+  if (!input.colorIntent) {
+    return buildUnknownScenario(input);
+  }
+  const intent = input.colorIntent;
+
+  const items = input.selectedIds.flatMap((elementId) => {
+    const element = input.template.elements[elementId];
+
+    if (!element) {
+      return invalidItem(input, elementId, "style", "Selected element is missing.");
+    }
+
+    const path = chooseColorPath(intent, element);
+
+    if (!path || !isEditablePath(element.type, path)) {
+      return invalidItem(
+        input,
+        elementId,
+        "style",
+        "Selected element cannot receive the requested color change.",
+      );
+    }
+
+    const fieldName = path.split(".")[1];
+    const before = getScopedValueForCommand(
+      element,
+      input.viewportScope,
+      "style",
+      fieldName,
+    );
+
+    return [
+      propertyItem(input, element, "style", path, before, intent.value),
+    ];
+  });
+
+  return batchBase(input, items);
+}
+
+function chooseColorPath(
+  intent: ColorIntent,
+  element: TemplateElement,
+): "style.background" | "style.color" | null {
+  if (intent.pathKind === "background") {
+    return isEditablePath(element.type, "style.background")
+      ? "style.background"
+      : null;
+  }
+
+  if (intent.pathKind === "text") {
+    return isEditablePath(element.type, "style.color") ? "style.color" : null;
+  }
+
+  return isEditablePath(element.type, "style.background")
+    ? "style.background"
+    : "style.color";
 }
 
 function buildCardWiderFirstScenario(
@@ -427,6 +535,86 @@ function batchBase(
 
 function normalizeInstruction(instruction: string): string {
   return instruction.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function inferCanonicalInstruction(normalizedInstruction: string): string {
+  if (
+    normalizedInstruction.includes("dark blue") &&
+    (normalizedInstruction.includes("text") ||
+      normalizedInstruction.includes("font") ||
+      normalizedInstruction.includes("color") ||
+      normalizedInstruction.includes("element"))
+  ) {
+    return "make the selected element dark blue";
+  }
+
+  if (
+    normalizedInstruction.includes("concise") &&
+    (normalizedInstruction.includes("text") ||
+      normalizedInstruction.includes("copy") ||
+      normalizedInstruction.includes("short"))
+  ) {
+    return "make this text more concise";
+  }
+
+  if (
+    normalizedInstruction.includes("payment") ||
+    normalizedInstruction.includes("checkout")
+  ) {
+    return "add a payment system";
+  }
+
+  return normalizedInstruction;
+}
+
+function inferColorIntent(normalizedInstruction: string): ColorIntent | null {
+  const colorName = Object.keys(colorValues)
+    .sort((left, right) => right.length - left.length)
+    .find((name) => normalizedInstruction.includes(name));
+
+  if (!colorName) {
+    return null;
+  }
+
+  const mentionsColorChange =
+    normalizedInstruction.includes("color") ||
+    normalizedInstruction.includes("colour") ||
+    normalizedInstruction.includes("background") ||
+    normalizedInstruction.includes("bg") ||
+    normalizedInstruction.includes("text") ||
+    normalizedInstruction.includes("font");
+
+  if (!mentionsColorChange) {
+    return null;
+  }
+
+  if (
+    normalizedInstruction.includes("background") ||
+    normalizedInstruction.includes("bg")
+  ) {
+    return {
+      name: colorName,
+      pathKind: "background",
+      value: colorValues[colorName],
+    };
+  }
+
+  if (
+    normalizedInstruction.includes("text") ||
+    normalizedInstruction.includes("font")
+  ) {
+    return {
+      name: colorName,
+      pathKind: "text",
+      value: colorValues[colorName],
+    };
+  }
+
+  return {
+    name: colorName,
+    pathKind: "auto",
+    value: colorValues[colorName],
+  };
 }
 
 function conciseText(text: string): string {

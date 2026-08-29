@@ -121,6 +121,22 @@ describe("EditorShell", () => {
     expect(within(summary as HTMLElement).getByText("hero-heading")).toBeInTheDocument();
   });
 
+  it("deselects a layer when the selected layer is clicked again", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    const layer = screen.getByRole("button", {
+      name: "Hero Heading, hero-heading",
+    });
+
+    await user.click(layer);
+    expect(layer).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(layer);
+
+    expect(layer).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("No selection")).toBeInTheDocument();
+  });
+
   it("supports modifier-click multi-selection", async () => {
     const user = userEvent.setup();
     renderEditor();
@@ -231,6 +247,38 @@ describe("EditorShell", () => {
       "Deterministic local scenarios",
     );
     expect(screen.getByRole("button", { name: "Generate Proposal" })).toBeDisabled();
+  });
+
+  it("shows generated AI proposals in the AI panel and applies them on accept", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+    await user.click(screen.getByRole("tab", { name: "AI Edit" }));
+    fireEvent.change(screen.getByLabelText("Instruction"), {
+      target: { value: "make background yellow" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Generate Proposal" }));
+
+    const generatedProposals = screen.getByLabelText("Generated proposals");
+
+    expect(generatedProposals).toHaveTextContent("style.background");
+    expect(generatedProposals).toHaveTextContent("#facc15");
+    expect(store.getState().template.elements["hero-visual-card"].style.background).toBe(
+      "#17202a",
+    );
+
+    await user.click(
+      within(generatedProposals).getByRole("button", { name: "Accept proposal" }),
+    );
+
+    expect(store.getState().template.elements["hero-visual-card"].style.background).toBe(
+      "#facc15",
+    );
+    expect(generatedProposals).toHaveTextContent("accepted");
   });
 
   it("keeps the proposal drawer non-mutating and Step 5 scoped", () => {
@@ -381,7 +429,6 @@ describe("EditorShell", () => {
   });
 
   it("shows measured auto dimensions and commits fixed width and height", async () => {
-    const user = userEvent.setup();
     const { store } = renderEditor();
     const renderedButton = document.querySelector<HTMLElement>(
       '[data-element-id="hero-secondary-cta"]',
@@ -404,7 +451,7 @@ describe("EditorShell", () => {
         }) satisfies DOMRect,
     });
 
-    await user.click(
+    fireEvent.click(
       screen.getByRole("button", {
         name: "Hero Secondary CTA, hero-secondary-cta",
       }),
@@ -609,6 +656,41 @@ describe("EditorShell", () => {
     expect(movedLayout.offsetX).toBeGreaterThan(0);
     expect(movedLayout.offsetY).toBeGreaterThan(0);
     expect(movedLayout.width).toBeUndefined();
+  });
+
+  it("does not let parent movement variables leak into child elements", () => {
+    const { store } = renderEditor();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+
+    const moveHandle = screen.getByRole("button", {
+      name: "Move hero-visual-card",
+    });
+    fireEvent.pointerDown(moveHandle, { clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(screen.getByLabelText("Selection overlay"), {
+      clientX: 70,
+      clientY: 40,
+    });
+
+    const parentCard = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-visual-card"]',
+    );
+    const childBadge = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-visual-badge"]',
+    );
+    const committedOffset =
+      parentCard &&
+      store.getState().template.elements["hero-visual-card"].layout.offsetX;
+
+    expect(parentCard?.style.getPropertyValue("--element-offset-x")).toBe(
+      `${committedOffset}px`,
+    );
+    expect(childBadge?.style.getPropertyValue("--element-offset-x")).toBe(
+      "initial",
+    );
+    expect(childBadge?.style.getPropertyValue("--element-padding")).toBe("initial");
   });
 
   it("does not start canvas movement from the normal selection outline", () => {

@@ -225,25 +225,43 @@ function buildClassName(element: ResolvedTemplateElement, selected: boolean) {
 
 function buildInlineStyle(style: ElementStyle, layout: ElementLayout): CustomStyle {
   return {
-    "--element-align": layout.align,
-    "--element-background": style.background,
-    "--element-border-color": style.borderColor,
-    "--element-color": style.color,
-    "--element-columns": layout.columns,
-    "--element-font-size": style.fontSize ? `${style.fontSize}px` : undefined,
-    "--element-font-weight": style.fontWeight,
-    "--element-gap": layout.gap,
-    "--element-height": layout.height !== undefined ? `${layout.height}px` : undefined,
-    "--element-margin": layout.margin,
-    "--element-max-width": layout.maxWidth,
-    "--element-min-height": layout.minHeight !== undefined ? `${layout.minHeight}px` : undefined,
-    "--element-min-width": layout.minWidth !== undefined ? `${layout.minWidth}px` : undefined,
-    "--element-offset-x": layout.offsetX !== undefined ? `${layout.offsetX}px` : undefined,
-    "--element-offset-y": layout.offsetY !== undefined ? `${layout.offsetY}px` : undefined,
-    "--element-padding": layout.padding,
-    "--element-radius": style.radius,
-    "--element-shadow": style.shadow,
-    "--element-text-align": style.textAlign,
-    "--element-width": layout.width !== undefined ? `${layout.width}px` : undefined,
+    "--element-align": cssVariable(layout.align),
+    "--element-background": cssVariable(style.background),
+    "--element-border-color": cssVariable(style.borderColor),
+    "--element-color": cssVariable(style.color),
+    "--element-columns": cssVariable(layout.columns),
+    "--element-font-size": cssVariable(
+      style.fontSize ? `${style.fontSize}px` : undefined,
+    ),
+    "--element-font-weight": cssVariable(style.fontWeight),
+    "--element-gap": cssVariable(layout.gap),
+    "--element-height": cssVariable(
+      layout.height !== undefined ? `${layout.height}px` : undefined,
+    ),
+    "--element-margin": cssVariable(layout.margin),
+    "--element-max-width": cssVariable(layout.maxWidth),
+    "--element-min-height": cssVariable(
+      layout.minHeight !== undefined ? `${layout.minHeight}px` : undefined,
+    ),
+    "--element-min-width": cssVariable(
+      layout.minWidth !== undefined ? `${layout.minWidth}px` : undefined,
+    ),
+    "--element-offset-x": cssVariable(
+      layout.offsetX !== undefined ? `${layout.offsetX}px` : undefined,
+    ),
+    "--element-offset-y": cssVariable(
+      layout.offsetY !== undefined ? `${layout.offsetY}px` : undefined,
+    ),
+    "--element-padding": cssVariable(layout.padding),
+    "--element-radius": cssVariable(style.radius),
+    "--element-shadow": cssVariable(style.shadow),
+    "--element-text-align": cssVariable(style.textAlign),
+    "--element-width": cssVariable(
+      layout.width !== undefined ? `${layout.width}px` : undefined,
+    ),
   };
+}
+
+function cssVariable(value: string | number | undefined): string | number {
+  return value ?? "initial";
 }

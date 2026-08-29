@@ -19,6 +19,11 @@ export function LayersPanel() {
       return;
     }
 
+    if (selectedIds.includes(id)) {
+      dispatch(clearSelection());
+      return;
+    }
+
     dispatch(replaceSelection([id]));
   };
 
