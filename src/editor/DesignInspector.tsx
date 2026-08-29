@@ -83,9 +83,18 @@ const fieldDefinitions: FieldDefinition[] = [
   },
 ];
 
-interface RenderedSize {
+interface RenderedMetrics {
+  background: string;
+  borderColor: string;
+  color: string;
   elementId: string;
+  fontSize: number;
+  fontWeight: string;
+  gap: string;
   height: number;
+  margin: string;
+  padding: string;
+  radius: string;
   width: number;
 }
 
@@ -109,13 +118,13 @@ export function DesignInspector() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [renderedSize, setRenderedSize] = useState<RenderedSize | null>(null);
+  const [renderedMetrics, setRenderedMetrics] = useState<RenderedMetrics | null>(null);
 
   useLayoutEffect(() => {
     const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
     if (!selectedElement) {
-      setRenderedSize(null);
+      setRenderedMetrics(null);
       return;
     }
 
@@ -127,11 +136,12 @@ export function DesignInspector() {
       const node = findRenderedNode();
 
       if (!node) {
-        setRenderedSize(null);
+        setRenderedMetrics(null);
         return;
       }
 
       const rect = node.getBoundingClientRect();
+      const computed = getComputedStyle(node);
       const renderer = node.closest<HTMLElement>(".template-renderer");
       const rendererRect = renderer?.getBoundingClientRect();
       const rendererScale =
@@ -141,17 +151,30 @@ export function DesignInspector() {
       const scale = rendererScale > 0 ? rendererScale : 1;
       const width = Math.round(rect.width / scale);
       const height = Math.round(rect.height / scale);
+      const metrics: RenderedMetrics = {
+        background: normalizeColorDraft(computed.backgroundColor),
+        borderColor: normalizeColorDraft(computed.borderColor),
+        color: normalizeColorDraft(computed.color),
+        elementId: selectedElement.id,
+        fontSize: Math.round(Number.parseFloat(computed.fontSize) || 0),
+        fontWeight: normalizeFontWeight(computed.fontWeight),
+        gap: computed.gap,
+        height,
+        margin: computed.margin,
+        padding: computed.padding,
+        radius: computed.borderRadius,
+        width,
+      };
 
       if (width <= 0 || height <= 0) {
         return;
       }
 
-      setRenderedSize((current) =>
+      setRenderedMetrics((current) =>
         current?.elementId === selectedElement.id &&
-        current.width === width &&
-        current.height === height
+        areRenderedMetricsEqual(current, metrics)
           ? current
-          : { elementId: selectedElement.id, width, height },
+          : metrics,
       );
     };
 
@@ -184,18 +207,27 @@ export function DesignInspector() {
   useEffect(() => {
     const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
-    if (!selectedElement || renderedSize?.elementId !== selectedElement.id) {
+    if (!selectedElement || renderedMetrics?.elementId !== selectedElement.id) {
       return;
     }
 
     setDrafts((current) => {
       const nextDrafts = { ...current };
-      const dimensions = [
-        ["layout.width", renderedSize.width],
-        ["layout.height", renderedSize.height],
+      const computedFallbacks = [
+        ["layout.width", renderedMetrics.width, "layout"],
+        ["layout.height", renderedMetrics.height, "layout"],
+        ["style.fontSize", renderedMetrics.fontSize, "style"],
+        ["style.fontWeight", renderedMetrics.fontWeight, "style"],
+        ["style.radius", renderedMetrics.radius, "style"],
+        ["layout.padding", renderedMetrics.padding, "layout"],
+        ["layout.margin", renderedMetrics.margin, "layout"],
+        ["layout.gap", renderedMetrics.gap, "layout"],
+        ["style.color", renderedMetrics.color, "style"],
+        ["style.background", renderedMetrics.background, "style"],
+        ["style.borderColor", renderedMetrics.borderColor, "style"],
       ] as const;
 
-      dimensions.forEach(([path, measuredValue]) => {
+      computedFallbacks.forEach(([path, measuredValue, scope]) => {
         if (!editablePaths.includes(path) || current[path] !== "") {
           return;
         }
@@ -204,18 +236,18 @@ export function DesignInspector() {
         const scopedValue = getScopedValueForCommand(
           selectedElement,
           viewportScope,
-          "layout",
+          scope,
           fieldName,
         );
 
-        if (scopedValue === null) {
+        if (scopedValue === null && measuredValue !== "" && measuredValue !== 0) {
           nextDrafts[path] = String(measuredValue);
         }
       });
 
       return nextDrafts;
     });
-  }, [editablePaths, renderedSize, selectedElements, viewportScope]);
+  }, [editablePaths, renderedMetrics, selectedElements, viewportScope]);
 
   const applyField = (field: FieldDefinition) => {
     const parsedValue = parseFieldValue(field, drafts[field.path]);
@@ -380,15 +412,21 @@ export function DesignInspector() {
           ? `${selectedElements[0].name} (${selectedElements[0].id})`
           : `${selectedElements.length} selected${sameType ? "" : " across mixed types"}`}
       </p>
-      {renderedSize && selectedElements.length === 1 ? (
+      {selectedElements.length === 1 && isFixedElement(selectedElements[0]) ? (
+        <p className="field-status" role="status">
+          This element is fixed in the template structure, so it cannot be moved
+          or dragged. You can still edit its available design fields.
+        </p>
+      ) : null}
+      {renderedMetrics && selectedElements.length === 1 ? (
         <div className="rendered-size-readout" aria-label="Rendered element size">
           <span>Rendered size</span>
           <strong>
-            {renderedSize.width} x {renderedSize.height} px
+            {renderedMetrics.width} x {renderedMetrics.height} px
           </strong>
           <small>
-            Auto dimensions are measured from the canvas. Editing Width or Height
-            stores a fixed pixel value.
+            Blank fields use the visible canvas value. Editing Width, Height, or
+            Font size stores a fixed value.
           </small>
         </div>
       ) : null}
@@ -661,6 +699,22 @@ function rgbChannelToHex(value: string): string {
   return Math.max(0, Math.min(255, Number(value)))
     .toString(16)
     .padStart(2, "0");
+}
+
+function normalizeFontWeight(value: string): string {
+  if (/^\d+$/.test(value)) {
+    return value;
+  }
+
+  return value === "bold" ? "700" : "400";
+}
+
+function areRenderedMetricsEqual(left: RenderedMetrics, right: RenderedMetrics): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function isFixedElement(element: TemplateElement): boolean {
+  return element.type === "page" || element.type === "nav";
 }
 
 type InspectorFieldValue = string | number | boolean | null;

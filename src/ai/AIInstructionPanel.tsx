@@ -21,7 +21,6 @@ const examples = [
   "Make this card wider and move it first",
   "Stack selected items vertically",
   "Make the selected cards compact",
-  "Add a payment system",
 ];
 
 export function AIInstructionPanel() {

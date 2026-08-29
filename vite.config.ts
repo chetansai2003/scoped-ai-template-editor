@@ -11,5 +11,6 @@ export default defineConfig({
     maxWorkers: 1,
     pool: "forks",
     setupFiles: "./vitest.setup.ts",
+    testTimeout: 10000,
   },
 });

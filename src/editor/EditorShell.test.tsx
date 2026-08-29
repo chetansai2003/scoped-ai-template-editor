@@ -570,6 +570,69 @@ describe("EditorShell", () => {
     expect(nav?.style.getPropertyValue("--element-color")).toBe("#ffeeaa");
   });
 
+  it("explains that fixed nav elements cannot be moved", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Top Nav, top-nav" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "This element is fixed in the template structure",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Move top-nav" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows computed font size for badges and applies font-size changes", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+    const badge = document.querySelector<HTMLElement>(
+      '[data-element-id="hero-eyebrow"]',
+    );
+
+    expect(badge).not.toBeNull();
+    Object.defineProperty(badge, "getBoundingClientRect", {
+      configurable: true,
+      value: () =>
+        ({
+          bottom: 32,
+          height: 32,
+          left: 0,
+          right: 240,
+          top: 0,
+          width: 240,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }) satisfies DOMRect,
+    });
+    if (badge) {
+      badge.style.borderRadius = "999px";
+      badge.style.fontSize = "13px";
+      badge.style.fontWeight = "800";
+      badge.style.padding = "7px 11px";
+    }
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Eyebrow, hero-eyebrow" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Font size")).toHaveValue(13);
+    });
+
+    fireEvent.change(screen.getByLabelText("Font size"), {
+      target: { value: "18" },
+    });
+    fireEvent.blur(screen.getByLabelText("Font size"));
+
+    expect(store.getState().template.elements["hero-eyebrow"].style.fontSize).toBe(
+      18,
+    );
+    expect(badge?.style.getPropertyValue("--element-font-size")).toBe("18px");
+  });
+
   it("shows viewport impact and commits mobile-only visibility as an override", async () => {
     const user = userEvent.setup();
     const { store } = renderEditor();
