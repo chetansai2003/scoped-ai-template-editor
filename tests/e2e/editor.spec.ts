@@ -1,10 +1,27 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 
+const browserIssuesByPage = new WeakMap<Page, string[]>();
+
 test.describe('Scoped AI Template Editor reviewer journeys', () => {
   test.beforeEach(async ({ page }) => {
+    const browserIssues: string[] = [];
+    browserIssuesByPage.set(page, browserIssues);
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        browserIssues.push(message.text());
+      }
+    });
+    page.on('pageerror', (error) => {
+      browserIssues.push(error.message);
+    });
+
     await page.goto('/');
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
+  });
+
+  test.afterEach(async ({ page }) => {
+    expect(browserIssuesByPage.get(page) ?? []).toEqual([]);
   });
 
   test('should persist edits across reload', async ({ page }) => {
@@ -115,6 +132,51 @@ test.describe('Scoped AI Template Editor reviewer journeys', () => {
     await radiusField.fill('16');
     await applyInspectorField(radiusField);
     await expect(renderedButton).toHaveCSS('border-radius', '16px');
+  });
+
+  test('viewport buttons resize the rendered preview frame', async ({ page }) => {
+    await expect(page.locator('.canvas-device')).toHaveAttribute('data-intrinsic-width', '1440');
+
+    await page.getByRole('button', { name: 'Tablet' }).click();
+    await expect(page.locator('.canvas-device')).toHaveAttribute('data-intrinsic-width', '768');
+    await expect(page.getByLabel('tablet preview')).toContainText('Built for clean launches');
+
+    await page.getByRole('button', { name: 'Mobile' }).click();
+    await expect(page.locator('.canvas-device')).toHaveAttribute('data-intrinsic-width', '375');
+    await expect(page.getByLabel('mobile preview')).toContainText('Premium websites');
+  });
+
+  test('typed unsupported AI payment request does not mutate the canvas', async ({ page }) => {
+    await page.locator('.layer-row', { hasText: 'Hero Heading' }).click();
+    await page.getByRole('tab', { name: 'AI Edit' }).click();
+
+    await page.getByLabel('Instruction').fill('Add a payment system');
+    await page.getByRole('button', { name: 'Generate Proposal' }).click();
+
+    await expect(page.getByRole('status')).toContainText(
+      'Payment systems require backend and integration work outside Step 5.',
+    );
+    await expect(page.getByLabel('Generated proposals')).toContainText(
+      'No proposal items were generated.',
+    );
+    await expect(page.locator('.editor-main')).toContainText(
+      'Premium websites for teams moving faster than their roadmap.',
+    );
+  });
+
+  test('visual style edit commits once and undo restores the previous value', async ({ page }) => {
+    const heading = page.locator('[data-element-id="hero-heading"]');
+
+    await page.locator('.layer-row', { hasText: 'Hero Heading' }).click();
+    await page.getByRole('tab', { name: 'Design' }).click();
+
+    const colorField = page.getByLabel('Text color hex value');
+    await colorField.fill('#224466');
+    await applyInspectorField(colorField);
+    await expect(heading).toHaveCSS('color', 'rgb(34, 68, 102)');
+
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(heading).toHaveCSS('color', 'rgb(21, 32, 40)');
   });
 });
 

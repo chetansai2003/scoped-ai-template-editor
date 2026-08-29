@@ -6,10 +6,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: process.env.PLAYWRIGHT_HTML_REPORT
+    ? [['html', { outputFolder: '.playwright-report', open: 'never' }]]
+    : 'line',
+  outputDir: '.playwright-artifacts',
   use: {
     baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   projects: [
     {

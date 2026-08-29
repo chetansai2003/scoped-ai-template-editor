@@ -137,6 +137,25 @@ describe("EditorShell", () => {
     expect(screen.getByText("No selection")).toBeInTheDocument();
   });
 
+  it("replaces the selected layer on a normal click", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Hero Body, hero-body" }),
+    );
+
+    const summary = screen.getByText("Selected stable IDs").parentElement;
+    expect(summary).not.toBeNull();
+    expect(within(summary as HTMLElement).getByText("hero-body")).toBeInTheDocument();
+    expect(
+      within(summary as HTMLElement).queryByText("hero-heading"),
+    ).not.toBeInTheDocument();
+  });
+
   it("supports modifier-click multi-selection", async () => {
     const user = userEvent.setup();
     renderEditor();
@@ -279,6 +298,56 @@ describe("EditorShell", () => {
       "#facc15",
     );
     expect(generatedProposals).toHaveTextContent("accepted");
+  });
+
+  it("rejects unsupported typed payment AI requests without mutating state", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+    const originalTemplate = store.getState().template;
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+    await user.click(screen.getByRole("tab", { name: "AI Edit" }));
+    fireEvent.change(screen.getByLabelText("Instruction"), {
+      target: { value: "Add a payment system" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Generate Proposal" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Payment systems require backend and integration work outside Step 5.",
+    );
+    expect(screen.getByLabelText("Generated proposals")).toHaveTextContent(
+      "No proposal items were generated.",
+    );
+    expect(store.getState().template).toBe(originalTemplate);
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
+  });
+
+  it("rejecting an AI proposal updates proposal UI only", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Visual Card, hero-visual-card" }),
+    );
+    await user.click(screen.getByRole("tab", { name: "AI Edit" }));
+    fireEvent.change(screen.getByLabelText("Instruction"), {
+      target: { value: "make background yellow" },
+    });
+    await user.click(screen.getByRole("button", { name: "Generate Proposal" }));
+
+    const generatedProposals = screen.getByLabelText("Generated proposals");
+    await user.click(
+      within(generatedProposals).getByRole("button", { name: "Reject proposal" }),
+    );
+
+    expect(generatedProposals).toHaveTextContent("rejected");
+    expect(store.getState().template.elements["hero-visual-card"].style.background).toBe(
+      "#17202a",
+    );
+    expect(selectTotalCommittedHistoryEntries(store.getState())).toBe(0);
   });
 
   it("keeps the proposal drawer non-mutating and Step 5 scoped", () => {

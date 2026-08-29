@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.tsbuildinfo
 *.local
+playwright-artifacts/
+.playwright-artifacts/
+.playwright-report/
 
 # Editor directories and files
 .vscode/*
