@@ -1,4 +1,5 @@
 import type { RootState } from "../app/store";
+import { createSelector } from "@reduxjs/toolkit";
 import type { EditSource, HistoryEntry } from "../commands/commandTypes";
 import type { ViewportScope } from "../store/editorUISlice";
 import type { ElementId } from "../template/templateTypes";
@@ -37,16 +38,19 @@ export function selectHistoryEntryById(
   return undefined;
 }
 
-export function selectLatestUndoableCommandGroup(
-  state: RootState,
-): HistoryCommandGroup | null {
-  const undoneCommandIds = new Set(state.history.undoneCommandIds ?? []);
+const selectHistoryByElement = (state: RootState) => state.history.byElement;
+const selectUndoneCommandIds = (state: RootState) => state.history.undoneCommandIds;
+
+export const selectLatestUndoableCommandGroup = createSelector(
+  [selectHistoryByElement, selectUndoneCommandIds],
+  (byElement, undoneCommandIds): HistoryCommandGroup | null => {
+  const undoneCommandIdSet = new Set(undoneCommandIds ?? []);
   const groups = new Map<string, HistoryCommandGroup>();
 
-  Object.values(state.history.byElement).forEach((scopedHistory) => {
+  Object.values(byElement).forEach((scopedHistory) => {
     Object.values(scopedHistory).forEach((entries) => {
       entries.forEach((entry) => {
-        if (entry.source === "restore" || undoneCommandIds.has(entry.commandId)) {
+        if (entry.source === "restore" || undoneCommandIdSet.has(entry.commandId)) {
           return;
         }
 
@@ -75,7 +79,7 @@ export function selectLatestUndoableCommandGroup(
   return [...groups.values()].sort((left, right) =>
     right.latestTimestamp.localeCompare(left.latestTimestamp),
   )[0] ?? null;
-}
+});
 
 export function selectTotalCommittedHistoryEntries(state: RootState): number {
   return Object.values(state.history.byElement).reduce(

@@ -842,6 +842,128 @@ describe("command executor", () => {
     expect(selectLatestUndoableCommandGroup(store.getState())).toBeNull();
   });
 
+  it("undoes layout offsets by removing fields that were originally missing", () => {
+    const store = createAppStore();
+
+    store.dispatch(
+      executeCommand(
+        commandFromStore(
+          store,
+          "cmd-undo-offset",
+          "hero-visual-card",
+          "layout",
+          "all",
+          "layout.offsetX",
+          null,
+          60,
+        ),
+      ),
+    );
+
+    const group = selectLatestUndoableCommandGroup(store.getState());
+
+    if (!group) {
+      throw new Error("Expected undoable offset group");
+    }
+
+    const undo = createUndoCommand(group, store.getState().template, {
+      id: "cmd-global-undo-offset",
+      timestamp: "2026-08-27T09:36:00.000Z",
+    });
+
+    expect(undo.ok).toBe(true);
+
+    if (undo.ok) {
+      expect(store.dispatch(executeCommand(undo.command))).toMatchObject({
+        ok: true,
+      });
+    }
+
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        store.getState().template.elements["hero-visual-card"].layout,
+        "offsetX",
+      ),
+    ).toBe(false);
+    expect(store.getState().template.elements["hero-visual-card"].layout.offsetX).toBeUndefined();
+  });
+
+  it("undoes viewport overrides by deleting only the override field", () => {
+    const store = createAppStore();
+
+    store.dispatch(
+      executeCommand(
+        commandFromStore(
+          store,
+          "cmd-mobile-color-to-undo",
+          "hero-heading",
+          "style",
+          "mobile",
+          "style.color",
+          "#152028",
+          "#008000",
+        ),
+      ),
+    );
+
+    expect(
+      store.getState().template.elements["hero-heading"].overrides.mobile?.style
+        ?.color,
+    ).toBe("#008000");
+
+    const group = selectLatestUndoableCommandGroup(store.getState());
+
+    if (!group) {
+      throw new Error("Expected undoable mobile color group");
+    }
+
+    const undo = createUndoCommand(group, store.getState().template, {
+      id: "cmd-global-undo-mobile-color",
+      timestamp: "2026-08-27T09:37:00.000Z",
+    });
+
+    expect(undo.ok).toBe(true);
+
+    if (undo.ok) {
+      expect(store.dispatch(executeCommand(undo.command))).toMatchObject({
+        ok: true,
+      });
+    }
+
+    expect(
+      store.getState().template.elements["hero-heading"].overrides.mobile?.style
+        ?.color,
+    ).toBeUndefined();
+    expect(store.getState().template.elements["hero-heading"].style.color).toBe(
+      "#152028",
+    );
+  });
+
+  it("returns the same latest undoable group reference for unchanged state", () => {
+    const store = createAppStore();
+
+    store.dispatch(
+      executeCommand(
+        commandFromStore(
+          store,
+          "cmd-stable-undo-selector",
+          "hero-heading",
+          "style",
+          "all",
+          "style.color",
+          "#152028",
+          "#111111",
+        ),
+      ),
+    );
+
+    const state = store.getState();
+
+    expect(selectLatestUndoableCommandGroup(state)).toBe(
+      selectLatestUndoableCommandGroup(state),
+    );
+  });
+
   it("undoes a multi-target command as one global command group", () => {
     const store = createAppStore();
 

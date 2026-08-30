@@ -60,15 +60,22 @@ function createPropertyUndoCommand(
             entry.propertyScope,
             fieldName,
           );
+          const undoValue = getUndoValue(
+            element,
+            entry.viewportScope,
+            entry.propertyScope,
+            fieldName,
+            beforeValue as JsonValue,
+          );
 
-          if (areJsonValuesEqual(currentValue, beforeValue as JsonValue)) {
+          if (areJsonValuesEqual(currentValue, undoValue)) {
             return null;
           }
 
           return {
             path: `${entry.propertyScope}.${fieldName}`,
             oldValue: currentValue,
-            newValue: beforeValue as JsonValue,
+            newValue: undoValue,
           };
         })
         .filter((change): change is PropertyChange => Boolean(change));
@@ -101,6 +108,23 @@ function createPropertyUndoCommand(
   };
 
   return { ok: true, command };
+}
+
+function getUndoValue(
+  element: TemplateElement,
+  viewportScope: HistoryEntry["viewportScope"],
+  propertyScope: HistoryEntry["propertyScope"],
+  fieldName: string,
+  beforeValue: JsonValue,
+): JsonValue {
+  if (viewportScope === "all") {
+    return beforeValue;
+  }
+
+  const baseValues = element[propertyScope] as Record<string, JsonValue | undefined>;
+  const baseValue = baseValues[fieldName] ?? null;
+
+  return areJsonValuesEqual(baseValue, beforeValue) ? null : beforeValue;
 }
 
 function createStructuralUndoCommand(

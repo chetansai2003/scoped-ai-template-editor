@@ -1,9 +1,12 @@
 import { chromium } from "@playwright/test";
 
+/* global console, getComputedStyle, localStorage, process */
+
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1680, height: 1050 } });
 const consoleIssues = [];
 const results = [];
+const baseUrl = process.env.QA_BASE_URL ?? "http://localhost:5173/";
 
 page.on("console", (message) => {
   if (message.type() === "error" || message.type() === "warning") {
@@ -32,7 +35,7 @@ async function record(area, scenario, run) {
 }
 
 async function fresh() {
-  await page.goto("http://localhost:5174/");
+  await page.goto(baseUrl);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 }

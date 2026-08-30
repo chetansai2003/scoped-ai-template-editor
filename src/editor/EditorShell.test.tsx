@@ -253,6 +253,7 @@ describe("EditorShell", () => {
     expect(screen.getByRole("tabpanel")).toHaveTextContent("Editing Hero Heading");
     expect(screen.getByLabelText("Code scope")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply Changes" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Focused JSON editor")).toBeInTheDocument();
     expect(document.querySelector(".cm-editor")).toBeInTheDocument();
   });
 
@@ -598,6 +599,50 @@ describe("EditorShell", () => {
     );
   });
 
+  it("keeps text alignment available after repeated text style and offset edits", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", { name: "Hero Heading, hero-heading" }),
+    );
+
+    const colorInput = screen.getByLabelText("Text color hex value");
+    fireEvent.change(colorInput, { target: { value: "#ff0000" } });
+    fireEvent.blur(colorInput);
+    fireEvent.change(colorInput, { target: { value: "#008000" } });
+    fireEvent.blur(colorInput);
+
+    const fontSizeInput = screen.getByLabelText("Font size");
+    fireEvent.change(fontSizeInput, { target: { value: "42" } });
+    fireEvent.blur(fontSizeInput);
+    fireEvent.change(fontSizeInput, { target: { value: "36" } });
+    fireEvent.blur(fontSizeInput);
+
+    fireEvent.change(screen.getByLabelText("X offset"), {
+      target: { value: "24" },
+    });
+    fireEvent.blur(screen.getByLabelText("X offset"));
+    fireEvent.change(screen.getByLabelText("Y offset"), {
+      target: { value: "12" },
+    });
+    fireEvent.blur(screen.getByLabelText("Y offset"));
+
+    expect(screen.getByLabelText("Text alignment")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Text alignment"), "center");
+    const alignmentField = screen.getByLabelText("Text alignment").closest(".inspector-field");
+    expect(alignmentField).not.toBeNull();
+    await user.click(
+      within(alignmentField as HTMLElement).getByRole("button", { name: "Apply" }),
+    );
+
+    expect(store.getState().template.elements["hero-heading"].style.textAlign).toBe(
+      "center",
+    );
+    expect(store.getState().template.elements["hero-body"].style.textAlign).toBeUndefined();
+  });
+
   it("does not show inherited text alignment controls for section selections", async () => {
     const user = userEvent.setup();
     renderEditor();
@@ -727,6 +772,43 @@ describe("EditorShell", () => {
         ?.visible,
     ).toBe(false);
     expect(store.getState().template.elements["feature-strategy"].layout.visible).toBeUndefined();
+  });
+
+  it("keeps hidden elements selected so visibility can be restored from the inspector", async () => {
+    const user = userEvent.setup();
+    const { store } = renderEditor();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Hero Secondary CTA, hero-secondary-cta",
+      }),
+    );
+
+    const visibleInput = screen.getByLabelText("Visible");
+    await user.click(visibleInput);
+    const hideField = visibleInput.closest(".inspector-field");
+    expect(hideField).not.toBeNull();
+    await user.click(within(hideField as HTMLElement).getByRole("button", { name: "Apply" }));
+
+    expect(
+      document.querySelector('[data-element-id="hero-secondary-cta"]'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Hero Secondary CTA, hero-secondary-cta, hidden in canvas",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Visible")).not.toBeChecked();
+
+    await user.click(screen.getByLabelText("Visible"));
+    const showField = screen.getByLabelText("Visible").closest(".inspector-field");
+    expect(showField).not.toBeNull();
+    await user.click(within(showField as HTMLElement).getByRole("button", { name: "Apply" }));
+
+    expect(
+      document.querySelector('[data-element-id="hero-secondary-cta"]'),
+    ).toBeInTheDocument();
+    expect(store.getState().template.elements["hero-secondary-cta"].layout.visible).toBe(true);
   });
 
   it("keeps resize movement local until pointer release creates one history entry", () => {

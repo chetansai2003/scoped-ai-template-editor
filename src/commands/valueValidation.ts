@@ -49,6 +49,10 @@ export function validateNewValue(
   fieldName: string,
   value: JsonValue,
 ): CommandError | null {
+  if (value === null) {
+    return null;
+  }
+
   if (scope === "content") {
     return validateContentValue(fieldName, value);
   }

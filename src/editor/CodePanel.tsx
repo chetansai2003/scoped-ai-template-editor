@@ -132,6 +132,7 @@ export function CodePanel() {
       </label>
       <div className="code-mirror-wrap">
         <CodeMirror
+          aria-label="Focused JSON editor"
           basicSetup={{
             foldGutter: false,
             highlightActiveLine: true,

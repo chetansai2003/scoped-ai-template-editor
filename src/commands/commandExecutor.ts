@@ -978,16 +978,27 @@ function applyChange(
   const existingViewportOverride = element.overrides[viewportScope] ?? {};
   const existingScopedOverride = existingViewportOverride[propertyScope] ?? {};
   const nextScopedOverride = writeField(existingScopedOverride, fieldName, value);
+  const nextViewportOverride = {
+    ...existingViewportOverride,
+    [propertyScope]: nextScopedOverride,
+  };
+
+  if (Object.keys(nextScopedOverride).length === 0) {
+    delete nextViewportOverride[propertyScope];
+  }
+
+  const nextOverrides = {
+    ...element.overrides,
+    [viewportScope]: nextViewportOverride,
+  };
+
+  if (Object.keys(nextViewportOverride).length === 0) {
+    delete nextOverrides[viewportScope];
+  }
 
   return {
     ...element,
-    overrides: {
-      ...element.overrides,
-      [viewportScope]: {
-        ...existingViewportOverride,
-        [propertyScope]: nextScopedOverride,
-      },
-    },
+    overrides: nextOverrides,
   };
 }
 
@@ -1021,6 +1032,13 @@ function writeField(
   fieldName: string,
   value: JsonValue,
 ): Partial<ScopedValues> {
+  if (value === null) {
+    const nextValues = { ...values } as Record<string, JsonValue | undefined>;
+    delete nextValues[fieldName];
+
+    return nextValues as Partial<ScopedValues>;
+  }
+
   return {
     ...values,
     [fieldName]: value,

@@ -538,6 +538,7 @@ function renderFieldInput(
     return (
       <textarea
         id={id}
+        aria-label={field.label}
         rows={3}
         value={draft}
         onChange={(event) => onChange(event.currentTarget.value)}
@@ -556,6 +557,7 @@ function renderFieldInput(
     return (
       <select
         id={id}
+        aria-label={field.label}
         value={field.options?.includes(draft) ? draft : ""}
         onChange={(event) => onChange(event.currentTarget.value)}
         onBlur={onCommit}
@@ -581,6 +583,7 @@ function renderFieldInput(
     return (
       <input
         id={id}
+        aria-label={field.label}
         checked={draft === "true"}
         type="checkbox"
         onChange={(event) => onChange(String(event.currentTarget.checked))}
@@ -592,6 +595,7 @@ function renderFieldInput(
   return (
     <input
       id={id}
+      aria-label={field.label}
       type={field.kind === "number" ? "number" : "text"}
       value={draft}
       onChange={(event) => onChange(event.currentTarget.value)}

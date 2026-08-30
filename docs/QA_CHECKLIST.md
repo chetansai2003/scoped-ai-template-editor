@@ -4,9 +4,10 @@
 
 - [x] `npm run typecheck` passed.
 - [x] `npm run lint` passed.
-- [x] `npm run test:run` passed: 101 Vitest tests.
+- [x] `npm run test:run` passed: 106 Vitest tests.
 - [x] `npx playwright test --reporter=line` passed: 7 Chromium reviewer-journey tests.
 - [x] `npm run build` passed with a non-blocking Vite chunk-size warning.
+- [x] Deep browser-style manual QA passed for representative Design, drag/undo, AI, and Code journeys.
 
 ## Reviewer Journey Checks
 
