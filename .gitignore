@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.tsbuildinfo
 *.local
+scoped-ai-template-editor-architecture-7-steps.pdf
 playwright-artifacts/
 .playwright-artifacts/
 .playwright-report/

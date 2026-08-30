@@ -105,7 +105,7 @@ The engine is deterministic and local. It does not call an API, generate random 
 | Code edits update same state/canvas | CodePanel and code diff tests |
 | AI proposals reviewed before apply | AI scenario/proposal tests and drawer UI |
 | Persistence/reset/recovery | persistence unit tests and Playwright reviewer journeys |
-| Reviewer readiness | `docs/REVIEWER_DEMO.md`, `docs/QA_CHECKLIST.md`, automated checks |
+| Reviewer readiness | `docs/REVIEWER_DEMO.md` and automated checks |
 
 ## Vercel Readiness
 
@@ -124,6 +124,6 @@ Latest Step 7 verification:
 
 - `npm run typecheck` passed.
 - `npm run lint` passed.
-- `npm run test:run` passed: 90 Vitest tests.
-- `npx playwright test` passed: 3 Chromium tests after installing Playwright Chromium locally.
+- `npm run test:run` passed: 106 Vitest tests.
+- `npx playwright test --reporter=line` passed: 7 Chromium tests.
 - `npm run build` passed with a non-blocking Vite chunk-size warning.

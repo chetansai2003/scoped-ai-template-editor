@@ -13,7 +13,7 @@
 - `src/persistence`: localStorage schema, load/save/clear helpers, and tests.
 - `src/history`: scoped history selectors.
 - `tests/e2e`: Playwright reviewer-journey tests.
-- `docs`: reviewer demo and QA checklist.
+- `docs`: reviewer demo.
 - Do not create empty placeholder files for future features.
 
 ## Commands

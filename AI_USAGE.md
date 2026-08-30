@@ -32,8 +32,8 @@ The user requested Step 7 only: documentation, deployment readiness, reviewer de
 
 - Typecheck passed.
 - Lint passed after removing explicit `any` usage and ignoring generated Playwright output folders.
-- Vitest passed: 90 tests after the manual-editing usability fixes.
-- Playwright passed: 3 Chromium tests after installing the local Playwright Chromium browser.
+- Vitest passed: 106 tests after the manual-editing usability fixes.
+- Playwright passed: 7 Chromium tests.
 - Production build passed. Vite reported a chunk-size warning, treated as non-blocking because no reviewer-visible performance issue was found in the tested flows.
 
 ## Review Process
@@ -42,4 +42,4 @@ Failures were inspected before changes were made. Stale tests were updated only 
 
 ## Current Uncertainty
 
-Manual checklist items in `docs/QA_CHECKLIST.md` remain reviewer-facing prompts unless they are marked as automated evidence. No deployment URL or external production verification is claimed.
+No deployment URL or external production verification is claimed.
