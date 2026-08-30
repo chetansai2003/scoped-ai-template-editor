@@ -262,6 +262,6 @@ function buildInlineStyle(style: ElementStyle, layout: ElementLayout): CustomSty
   };
 }
 
-function cssVariable(value: string | number | undefined): string | number | undefined {
-  return value;
+function cssVariable(value: string | number | undefined): string | number {
+  return value ?? "initial";
 }

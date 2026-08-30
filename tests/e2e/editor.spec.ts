@@ -53,24 +53,24 @@ test.describe('Scoped AI Template Editor reviewer journeys', () => {
 
     // 2. Open Reset dialog
     await page.getByRole('button', { name: 'Reset' }).click();
-    
+
     // 3. Cancel first
     await page.getByRole('button', { name: 'Cancel' }).click();
     // Verify still there
     await expect(page.locator('.editor-main')).toContainText('Temporary Text');
-    
+
     // 4. Confirm Reset
     await page.getByRole('button', { name: 'Reset' }).click();
     await page.getByRole('button', { name: 'Confirm Reset' }).click();
-    
+
     // 5. Verify original text is back (assumes original was "Premium websites for teams moving faster")
     await expect(page.locator('.editor-main')).not.toContainText('Temporary Text');
-    
+
     // 6. Reload and verify still original
     await page.reload();
     await expect(page.locator('.editor-main')).not.toContainText('Temporary Text');
   });
-  
+
   test('history panel restores state', async ({ page }) => {
     // 1. Select element
     const layerItem = page.locator('.layer-row', { hasText: 'Hero Heading' });
@@ -84,7 +84,7 @@ test.describe('Scoped AI Template Editor reviewer journeys', () => {
 
     // 4. Switch to history tab
     await page.getByRole('tab', { name: 'History' }).click();
-    
+
     // 5. Click restore on the first entry (which should take it back to 'History Test 1' or original)
     // We have 2 entries now. The entries list is newest first or oldest first.
     // Let's just click the "Restore" button of the first one that appears.

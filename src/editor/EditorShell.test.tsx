@@ -12,9 +12,9 @@ function renderEditor() {
   return {
     store,
     ...render(
-    <Provider store={store}>
-      <EditorShell />
-    </Provider>,
+      <Provider store={store}>
+        <EditorShell />
+      </Provider>,
     ),
   };
 }
